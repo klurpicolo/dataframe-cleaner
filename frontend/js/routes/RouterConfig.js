@@ -1,5 +1,6 @@
 export const ROUTES = {
-  HomeKlur:'/',
+  Home:'/',
   About:'/about',
   DataframeV1: 'dataframev1',
+  DataframeV2: 'dataframeV2',
 }

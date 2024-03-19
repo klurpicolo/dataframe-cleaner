@@ -10,4 +10,5 @@ urlpatterns = [
     path("about", views.IndexView.as_view(), name="index"),
     path("homeklur", views.IndexView.as_view(), name="index"),
     path("dataframev1", views.IndexView.as_view(), name="index"),
+    path("dataframev2", views.IndexView.as_view(), name="index"),
 ]

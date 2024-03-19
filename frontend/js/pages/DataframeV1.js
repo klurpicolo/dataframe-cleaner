@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../store/api';
 
-const DataFrameDisplay = () => {
+const DataframeV1 = () => {
     const [file, setFile] = useState(null);
     const [dataFrame, setDataFrame] = useState(null);
 
@@ -59,4 +59,4 @@ const DataFrameDisplay = () => {
     );
 };
 
-export default DataFrameDisplay;
+export default DataframeV1;

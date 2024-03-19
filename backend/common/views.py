@@ -8,6 +8,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 import pandas as pd
 import uuid
 import bson
+import json
 
 class IndexView(generic.TemplateView):
     template_name = "common/index.html"
@@ -84,3 +85,39 @@ class FileUploadView(viewsets.ViewSet):
         })
 
         return Response(processed_data, status=status.HTTP_201_CREATED)
+
+class ProcessDataFrameViewV2(viewsets.ViewSet):
+    parser_classes = (MultiPartParser, FormParser)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[AllowAny],
+        url_path="dataframesv2",
+    )
+    def post(self, request, *args, **kwargs):
+        file_obj = request.FILES['file']
+
+        if not file_obj:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if file_obj.name.endswith('.csv'):
+                df = pd.read_csv(file_obj)
+            elif file_obj.name.endswith('.xls') or file_obj.name.endswith('.xlsx'):
+                df = pd.read_excel(file_obj)
+            else:
+                return Response({'error': 'Unsupported file type'}, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+            processed_data = process_dataframe(df)
+            table = json.loads(processed_data.to_json(orient='table'))
+            to_save = {
+                'dataframe_id': str(uuid.uuid4()) ,
+                'version': 1,
+                'data': table
+            }
+            saved = collection.insert_one(to_save.copy())
+            print(f'save result {saved}')
+            return Response(to_save, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

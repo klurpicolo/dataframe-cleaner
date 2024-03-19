@@ -5,7 +5,7 @@ import api from '../store/api';
 const data = [
   {
     name: {
-      firstName: 'Klur',
+      firstName: 'Klur2',
       lastName: 'Doe',
     },
     address: '261 Erdman Ford',
@@ -53,7 +53,7 @@ const data = [
 const schema = [
   {
     accessorKey: 'name.firstName', //access nested data with dot notation
-    header: 'First Name klur',
+    header: 'First Name klur2',
     size: 150,
   },
   {
@@ -104,11 +104,21 @@ const DataframeV2 = () => {
 
   return (
     <>
-      <h1>Dataframev2</h1>
+      <h1>Dataframe V2</h1>
       <h2>Upload CSV or Excel File</h2>
       <input type="file" onChange={handleFileChange} />
       <button onClick={handleFileUpload}>Upload</button>
-      <DisplayDataFrame data={data} schema={schema}></DisplayDataFrame>
+      {/* <DisplayDataFrame data={data} schema={schema}></DisplayDataFrame> */}
+      {dataFrame && (
+        <DisplayDataFrame
+          data={dataFrame.data.data} // Use data from the API response
+          schema={dataFrame.data.schema.fields.map(field => ({
+            accessorKey: field.name, // TODO fix issue with column contain .
+            header: field.name,
+            size: 150
+          }))} // Convert schema fields to match the expected format
+        />
+      )}
     </>
   )
 }

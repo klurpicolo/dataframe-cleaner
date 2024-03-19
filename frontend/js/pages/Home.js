@@ -17,6 +17,7 @@ const Home = () => {
 
   return (
     <>
+      <h1>Klur add sth</h1>
       <h2>Static assets</h2>
       <div id="django-background">
         If you are seeing the green Django logo on a white background and this

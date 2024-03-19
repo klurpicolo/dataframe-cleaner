@@ -12,11 +12,12 @@ test_reset:
 	poetry run backend/manage.py test backend/ $(ARG) --parallel
 
 backend_format:
-	black backend 
+	black backend
 
 # Commands for Docker version
 docker_setup:
 	docker volume create rhombus_ai_dbdata
+	docker volume create rhombus_ai_dbdata_nosql
 	docker-compose build --no-cache backend
 	docker-compose run frontend npm install
 
@@ -28,6 +29,12 @@ docker_test_reset:
 
 docker_up:
 	docker-compose up -d
+
+docker_up_dev_be_fe:
+	docker-compose up --scale backend=0 --scale frontend=0
+
+docker_up_dev_backend:
+	docker-compose up --scale backend=0
 
 docker_update_dependencies:
 	docker-compose down

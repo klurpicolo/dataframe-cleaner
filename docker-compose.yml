@@ -12,6 +12,13 @@ services:
     volumes:
       - dbdata:/var/lib/postgresql/data:delegated
 
+  db_nosql:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db:delegated
+
   broker:
     image: "rabbitmq:alpine"
 
@@ -41,6 +48,7 @@ services:
     env_file: backend/.env
     depends_on:
       - db
+      - db_nosql
       - broker
       - result
       - frontend
@@ -67,4 +75,7 @@ services:
 volumes:
   dbdata:
     name: rhombus_ai_dbdata
+    external: true
+  mongodata:
+    name: rhombus_ai_dbdata_nosql
     external: true

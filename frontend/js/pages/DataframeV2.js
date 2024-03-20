@@ -16,7 +16,7 @@ const DataframeV2 = () => {
     formData.append("file", file);
 
     try {
-      const response = await api.post("/api/rest/dataframesv2/", formData, {
+      const response = await api.post("/api/rest/dataframes/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

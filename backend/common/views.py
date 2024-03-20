@@ -57,50 +57,18 @@ class SaveMongo(viewsets.ViewSet):
 
 
 def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    # check file format first
     inferred_df = infer_df(df)
     return inferred_df
 
 
-class FileUploadView(viewsets.ViewSet):
-    parser_classes = (MultiPartParser, FormParser)
-
-    @action(
-        detail=False,
-        methods=["post"],
-        permission_classes=[AllowAny],
-        url_path="dataframes",
-    )
-    def post(self, request, *args, **kwargs):
-        file_obj = request.FILES["file"]
-        # Example: Processing CSV file
-        df = pd.read_csv(file_obj)
-
-        # Process the data further as needed
-        # For example, save to database or perform computations
-        processed_data = process_dataframe(df)
-
-        processed_data_dict = processed_data.rename(columns=str).to_json()
-        print(f"klur log {len(processed_data_dict)}")
-        saved = collection.insert_one(
-            {
-                "dataframe_id": bson.Binary.from_uuid(uuid.uuid4()),
-                "version_id": 1,
-                "data": processed_data_dict,
-            }
-        )
-
-        return Response(processed_data, status=status.HTTP_201_CREATED)
-
-
-class ProcessDataFrameViewV2(viewsets.ViewSet):
+class ProcessDataFrameView(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     @action(
         detail=False,
         methods=["post"],
         permission_classes=[AllowAny],
-        url_path="dataframesv2",
+        url_path="dataframes",
     )
     def create_dataframe(self, request, *args, **kwargs):
         file_obj = request.FILES["file"]

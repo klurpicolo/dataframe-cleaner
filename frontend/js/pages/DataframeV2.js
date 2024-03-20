@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Divider, MenuItem } from '@mui/material';
 import DisplayDataFrame from '../component/DisplayDataFrame'
 import api from '../store/api';
 
@@ -102,6 +103,14 @@ const DataframeV2 = () => {
       }
   };
 
+  function mapToType(field) {
+    console.log(field?.constraints?.enum?.length)
+    if (field?.constraints?.enum !== undefined ) {
+      return 'category'
+    }
+    return field.type
+  }
+
   return (
     <>
       <h1>Dataframe V2</h1>
@@ -114,7 +123,32 @@ const DataframeV2 = () => {
           data={dataFrame.data.data} // Use data from the API response
           schema={dataFrame.data.schema.fields.map(field => ({
             accessorKey: field.name, // TODO fix issue with column contain .
-            header: field.name,
+            header: field.name + '[' + mapToType(field) + ']', //TODO find the better way to display data
+            renderColumnActionsMenuItems: ({
+              closeMenu,
+              internalColumnMenuItems,
+            }) => [
+              ...internalColumnMenuItems,
+              <Divider key="divider-1" />,
+              <MenuItem
+                key={'item-1'}
+                onClick={() => {
+                  console.log('Item 1 clicked');
+                  closeMenu();
+                }}
+              >
+                Item 1
+              </MenuItem>,
+              <MenuItem
+                key={'item-2'}
+                onClick={() => {
+                  console.log('Item 2 clicked');
+                  closeMenu();
+                }}
+              >
+                Item 2
+              </MenuItem>,
+            ],
             size: 150
           }))} // Convert schema fields to match the expected format
         />

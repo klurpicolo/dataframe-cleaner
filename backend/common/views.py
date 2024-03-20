@@ -10,6 +10,8 @@ import uuid
 import bson
 import json
 
+from .data_processors2 import infer_df, map_df_to_json
+
 class IndexView(generic.TemplateView):
     template_name = "common/index.html"
 
@@ -49,17 +51,15 @@ class SaveMongo(viewsets.ViewSet):
                 status=status.HTTP_200_OK,
             )
 
-
 def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # check file format first
-    processed_df = pd.DataFrame()
+    inferred_df = infer_df(df)
+    return inferred_df
 
-    for col in df.columns:
-        processed_df[col] = df[col]
-    return processed_df
 
 class FileUploadView(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser)
+
 
     @action(
         detail=False,
@@ -109,15 +109,17 @@ class ProcessDataFrameViewV2(viewsets.ViewSet):
             else:
                 return Response({'error': 'Unsupported file type'}, status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
+            # print(f'df.dtypes {df.dtypes}')
             processed_data = process_dataframe(df)
-            table = json.loads(processed_data.to_json(orient='table'))
+            # print(f'klur process data \n {processed_data}')
+            table = json.loads(map_df_to_json(processed_data)) # TODO Save the data before to json instead
             to_save = {
-                'dataframe_id': str(uuid.uuid4()) ,
+                'dataframe_id': str(uuid.uuid4()),
                 'version': 1,
                 'data': table
             }
             saved = collection.insert_one(to_save.copy())
-            print(f'save result {saved}')
             return Response(to_save, status=status.HTTP_201_CREATED)
         except Exception as e:
+            print(f'exception {e}')
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

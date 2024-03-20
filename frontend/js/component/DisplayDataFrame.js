@@ -14,11 +14,6 @@ const DisplayDataFrame = ({ data, schema }) => {
     data: memoizedData, // Use the memoized data
   });
 
-  // const table = useMaterialReactTable({
-  //   columns,
-  //   data, //data must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
-  // });
-
   return <MaterialReactTable table={table} />;
 };
 

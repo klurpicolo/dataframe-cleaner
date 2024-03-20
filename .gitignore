@@ -50,3 +50,6 @@ tmp_email/
 .direnv
 .envrc
 .tool-versions
+
+# test data
+test_data/

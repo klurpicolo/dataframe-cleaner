@@ -13,7 +13,12 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .data_processors2 import infer_df, map_df_to_json
+from .data_processors2 import (
+    infer_df,
+    map_df_to_json,
+    process_operation_apply_script,
+    process_operation_cast_to,
+)
 from .minio_client import get_dataframe, upload_dataframe
 
 
@@ -97,26 +102,19 @@ class ProcessDataFrameView(viewsets.ViewSet):
             to_save = {
                 "dataframe_id": str(uuid.uuid4()),
                 "versions": [
-                    {
-                        "version_id": init_version_id,
-                        "operation": "initialize"
-                    }
-                ]
+                    {"version_id": init_version_id, "operation": "initialize"}
+                ],
             }
             collection.insert_one(to_save)
             upload_dataframe(to_save["dataframe_id"], init_version_id, processed_data)
-            json_processed_data = json.loads(
-                map_df_to_json(
-                    processed_data
-                )
-            )
+            json_processed_data = json.loads(map_df_to_json(processed_data))
 
             end_time = time.time()
-            print(f'Request process time: {end_time - start_time}')
+            print(f"Request process time: {end_time - start_time}")
             response = {
                 "dataframe_id": to_save["dataframe_id"],
                 "version_id": init_version_id,
-                "data": json_processed_data
+                "data": json_processed_data,
             }
             return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -142,40 +140,43 @@ class ProcessDataFrameView(viewsets.ViewSet):
         if operation:
             operation_type = operation.get("type", None)
 
+        if None in [dataframe_id, version_id, column, operation, operation_type]:
+            return Response(
+                {
+                    "error": "Missing parameters. Please provide all required parameters."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_script = operation.get("script", None)
         prev_dataframe = get_dataframe(dataframe_id, version_id)
-        # print(f'prev_dataframe_s3 {prev_dataframe}')
+        if operation_type == "apply_script":
+            processed_dataframe = process_operation_apply_script(
+                prev_dataframe, column, raw_script
+            )
+        else:
+            processed_dataframe = process_operation_cast_to(
+                prev_dataframe, column, operation_type
+            )
 
-        match operation_type:
-            case "cast_to_numeric":
-                prev_dataframe[column] = pd.to_numeric(
-                    prev_dataframe[column], errors="coerce"
-                )
-            case "cast_to_string":
-                prev_dataframe[column] = prev_dataframe[column].apply(str)
-            case "cast_to_datetime":
-                prev_dataframe[column] = pd.to_datetime(
-                    prev_dataframe[column], errors="coerce"
-                )
-            case "cast_to_boolean":
-                prev_dataframe[column] = prev_dataframe[column].apply(bool)
-
-        updated_dataframe = json.loads(map_df_to_json(prev_dataframe))
+        updated_dataframe = json.loads(map_df_to_json(processed_dataframe))
 
         updated_version_id = str(uuid.uuid4())
-        update_filter = {
-            'dataframe_id': dataframe_id
-        }
+        update_filter = {"dataframe_id": dataframe_id}
         update = {
-            '$push': {
-                'versions': {
+            "$push": {
+                "versions": {
                     "version_id": updated_version_id,
                     "operation": operation_type,
+                    **({"script": raw_script} if raw_script is not None else {}),
                     "column": column,
                 }
             }
         }
+
         collection.find_one_and_update(update_filter, update)
         upload_dataframe(dataframe_id, updated_version_id, prev_dataframe)
+
         response_data = {
             "dataframe_id": dataframe_id,
             "previous_version_id": version_id,

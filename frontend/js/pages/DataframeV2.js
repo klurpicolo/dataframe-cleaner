@@ -1,13 +1,25 @@
 import React, { useState } from "react";
-import { Divider, MenuItem, CircularProgress } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  Divider,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  TextField,
+  CircularProgress,
+} from "@mui/material";
 import DisplayDataFrame from "../component/DisplayDataFrame";
 import api from "../store/api";
-
 
 const DataframeV2 = () => {
   const [file, setFile] = useState(null);
   const [dataFrame, setDataFrame] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showApplyScriptForm, setShowApplyScriptForm] = useState(false);
+  const [applingScriptColumn, setApplingScriptColumn] = useState(null);
+  const [pythonCode, setPythonCode] = useState("");
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -35,12 +47,13 @@ const DataframeV2 = () => {
     }
   };
 
-  const handleColumnAction = async (operationType, column) => {
+  const handleColumnAction = async (column, operationType, script = null) => {
     const requestBody = {
       version_id: dataFrame.version_id,
       column: column,
       operation: {
         type: operationType,
+        script: script,
       },
     };
     console.log(
@@ -52,11 +65,19 @@ const DataframeV2 = () => {
         `/api/rest/dataframes/${dataFrame.dataframe_id}/process/`,
         requestBody,
       );
-      // setDataFrame({ ...dataFrame, data: response.data.data });
       setDataFrame(response.data);
     } catch (error) {
       console.error("Error processing DataFrame:", error);
     }
+  };
+
+  const handleApplyScript = () => {
+    console.log(
+      "handleApplyScript" + pythonCode + " to " + applingScriptColumn,
+    );
+    handleColumnAction(applingScriptColumn, "apply_script", pythonCode);
+    setPythonCode("");
+    setShowApplyScriptForm(false);
   };
 
   function mapToType(field) {
@@ -73,6 +94,31 @@ const DataframeV2 = () => {
       <input type="file" onChange={handleFileChange} />
       <button onClick={handleFileUpload}>Upload</button>
       {loading && <CircularProgress />}
+
+      <Dialog
+        open={showApplyScriptForm}
+        onClose={() => setShowApplyScriptForm(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>Apply script {applingScriptColumn}</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Python Code"
+            multiline
+            rows={10}
+            variant="outlined"
+            fullWidth
+            value={pythonCode}
+            onChange={(e) => setPythonCode(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowApplyScriptForm(false)}>Cancel</Button>
+          <Button onClick={handleApplyScript}>Submit</Button>
+        </DialogActions>
+      </Dialog>
+
       {dataFrame && (
         <>
           <p>dataframe id: {dataFrame.dataframe_id}</p>
@@ -82,7 +128,7 @@ const DataframeV2 = () => {
             data={dataFrame.data.data}
             schema={dataFrame.data.schema.fields.map((field) => ({
               accessorKey: field.name, // TODO fix issue with column contain .
-              header: field.name + "[" + mapToType(field) + "]", //TODO find the better way to display data
+              header: field.name + "[" + mapToType(field) + "]", //TODO find the better way to display data type
               renderColumnActionsMenuItems: ({
                 closeMenu,
                 internalColumnMenuItems,
@@ -92,7 +138,7 @@ const DataframeV2 = () => {
                 <MenuItem
                   key={"cast_to_numeric"}
                   onClick={() => {
-                    handleColumnAction("cast_to_numeric", field.name);
+                    handleColumnAction(field.name, "cast_to_numeric");
                     closeMenu();
                   }}
                 >
@@ -101,7 +147,7 @@ const DataframeV2 = () => {
                 <MenuItem
                   key={"cast_to_string"}
                   onClick={() => {
-                    handleColumnAction("cast_to_string", field.name);
+                    handleColumnAction(field.name, "cast_to_string");
                     closeMenu();
                   }}
                 >
@@ -110,7 +156,7 @@ const DataframeV2 = () => {
                 <MenuItem
                   key={"cast_to_datetime"}
                   onClick={() => {
-                    handleColumnAction("cast_to_datetime", field.name);
+                    handleColumnAction(field.name, "cast_to_datetime");
                     closeMenu();
                   }}
                 >
@@ -119,15 +165,25 @@ const DataframeV2 = () => {
                 <MenuItem
                   key={"cast_to_boolean"}
                   onClick={() => {
-                    handleColumnAction("cast_to_boolean", field.name);
+                    handleColumnAction(field.name, "cast_to_boolean");
                     closeMenu();
                   }}
                 >
                   Cast to Boolean
                 </MenuItem>,
+                <MenuItem
+                  key={"apply_function"}
+                  onClick={() => {
+                    setShowApplyScriptForm(true);
+                    setApplingScriptColumn(field.name);
+                    closeMenu();
+                  }}
+                >
+                  Apply function
+                </MenuItem>,
               ],
               size: 150,
-            }))} // Convert schema fields to match the expected format
+            }))}
           />
         </>
       )}

@@ -1,4 +1,5 @@
 import json
+import math
 
 import pandas as pd
 
@@ -50,6 +51,44 @@ def infer_df(df: pd.DataFrame):
     for col in df.columns:
         processed[col] = infer_col(df[col])
     return processed
+
+
+safe_namespace = {
+    "math": math,
+    "abs": abs,
+    "round": round,
+    "min": min,
+    "max": max,
+    "str": str,
+    "int": int,
+    "float": float,
+    "len": len,
+    # Add more functions as needed
+}
+
+
+def process_operation_apply_script(
+    prev_df: pd.DataFrame, col: str, raw_script: str
+) -> pd.DataFrame:
+    prev_df[col] = prev_df[col].apply(
+        lambda x: eval(raw_script, safe_namespace, {"x": x})
+    )  # TODO better secure code
+    return prev_df
+
+
+def process_operation_cast_to(
+    prev_df: pd.DataFrame, col: str, operation_type: str
+) -> pd.DataFrame:
+    match operation_type:
+        case "cast_to_numeric":
+            prev_df[col] = pd.to_numeric(prev_df[col], errors="coerce")
+        case "cast_to_string":
+            prev_df[col] = prev_df[col].apply(str)
+        case "cast_to_datetime":
+            prev_df[col] = pd.to_datetime(prev_df[col], errors="coerce")
+        case "cast_to_boolean":
+            prev_df[col] = prev_df[col].apply(bool)
+    return prev_df
 
 
 def map_df_to_json(df: pd.DataFrame) -> str:

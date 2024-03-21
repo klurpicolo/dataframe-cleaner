@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Divider, MenuItem } from "@mui/material";
+import { Divider, MenuItem, CircularProgress } from "@mui/material";
 import DisplayDataFrame from "../component/DisplayDataFrame";
 import api from "../store/api";
 
 const DataframeV2 = () => {
   const [file, setFile] = useState(null);
   const [dataFrame, setDataFrame] = useState(null);
+  const [loading, setLoading] = useState(false); // Add loading state
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -14,16 +15,18 @@ const DataframeV2 = () => {
   const handleFileUpload = async () => {
     const formData = new FormData();
     formData.append("file", file);
-
     try {
+      setLoading(true); // Set loading state to true when uploading file
       const response = await api.post("/api/rest/dataframes/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
+      setLoading(false); // Set loading state to false when response is received
       setDataFrame(response.data);
     } catch (error) {
       console.error("Error uploading file:", error);
+      setLoading(false); // Set loading state to false when response is received
     }
   };
 
@@ -65,6 +68,7 @@ const DataframeV2 = () => {
       <h2>Upload CSV or Excel File</h2>
       <input type="file" onChange={handleFileChange} />
       <button onClick={handleFileUpload}>Upload</button>
+      {loading && <CircularProgress />}
       {dataFrame && (
         <>
           <p>dataframe id: {dataFrame.dataframe_id}</p>

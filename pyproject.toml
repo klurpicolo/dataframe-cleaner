@@ -34,6 +34,7 @@ django-defender = "^0.9.7"
 pymongo = "^4.6.2"
 dnspython = "^2.6.1"
 pandas = "^2.2.1"
+minio = "^7.2.5"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.2.7"

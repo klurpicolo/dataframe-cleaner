@@ -1,9 +1,9 @@
 import json
+import traceback
 import uuid
 
 from django.views import generic
 
-import bson
 import pandas as pd
 import pymongo
 from rest_framework import status, viewsets
@@ -12,7 +12,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .data_processors2 import infer_df, map_df_to_json, map_json_to_df
+from .data_processors2 import infer_df, map_df_to_json
+from .minio_client import get_dataframe, upload_dataframe
 
 
 class IndexView(generic.TemplateView):
@@ -90,20 +91,32 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 )
 
             processed_data = process_dataframe(df)
-            table = json.loads(
+            init_version_id = str(uuid.uuid4())
+            to_save = {
+                "dataframe_id": str(uuid.uuid4()),
+                "versions": [
+                    {
+                        "version_id": init_version_id,
+                        "operation": "initialize"
+                    }
+                ]
+            }
+            collection.insert_one(to_save)
+            upload_dataframe(to_save["dataframe_id"], init_version_id, processed_data)
+            json_processed_data = json.loads(
                 map_df_to_json(
                     processed_data
                 )  # TODO Save the data before to json instead
             )
-            to_save = {
-                "dataframe_id": str(uuid.uuid4()),
-                "version_id": str(uuid.uuid4()),
-                "data": table,
+            response = {
+                "dataframe_id": to_save["dataframe_id"],
+                "version_id": init_version_id,
+                "data": json_processed_data
             }
-            saved = collection.insert_one(to_save.copy())
-            return Response(to_save, status=status.HTTP_201_CREATED)
+            return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
             print(f"exception {e}")
+            traceback.print_exception(e)
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -124,9 +137,8 @@ class ProcessDataFrameView(viewsets.ViewSet):
         if operation:
             operation_type = operation.get("type", None)
 
-        query = {"dataframe_id": dataframe_id, "version_id": version_id}
-        prev_dataframe_document = collection.find_one(query)
-        prev_dataframe = map_json_to_df(prev_dataframe_document["data"])
+        prev_dataframe = get_dataframe(dataframe_id, version_id)
+        print(f'prev_dataframe_s3 {prev_dataframe}')
 
         match operation_type:
             case "cast_to_numeric":
@@ -145,13 +157,20 @@ class ProcessDataFrameView(viewsets.ViewSet):
         updated_dataframe = json.loads(map_df_to_json(prev_dataframe))
 
         updated_version_id = str(uuid.uuid4())
-        to_save = {
-            "dataframe_id": dataframe_id,
-            "version_id": updated_version_id,
-            "data": updated_dataframe,
+        update_filter = {
+            'dataframe_id': dataframe_id
         }
-        collection.insert_one(to_save)
-
+        update = {
+            '$push': {
+                'versions': {
+                    "version_id": updated_version_id,
+                    "operation": operation_type,
+                    "column": column,
+                }
+            }
+        }
+        collection.find_one_and_update(update_filter, update)
+        upload_dataframe(dataframe_id, updated_version_id, prev_dataframe)
         response_data = {
             "dataframe_id": dataframe_id,
             "previous_version_id": version_id,
@@ -160,5 +179,4 @@ class ProcessDataFrameView(viewsets.ViewSet):
             "operation_type": operation_type,
             "data": updated_dataframe,
         }
-
-        return Response(response_data)
+        return Response(response_data, status=status.HTTP_201_CREATED)

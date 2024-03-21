@@ -3,10 +3,11 @@ import { Divider, MenuItem, CircularProgress } from "@mui/material";
 import DisplayDataFrame from "../component/DisplayDataFrame";
 import api from "../store/api";
 
+
 const DataframeV2 = () => {
   const [file, setFile] = useState(null);
   const [dataFrame, setDataFrame] = useState(null);
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [loading, setLoading] = useState(false);
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -16,17 +17,21 @@ const DataframeV2 = () => {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      setLoading(true); // Set loading state to true when uploading file
+      setLoading(true);
+      const startTime = new Date();
       const response = await api.post("/api/rest/dataframes/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      setLoading(false); // Set loading state to false when response is received
+      const endTime = new Date();
+      const timeDiffInSeconds = (endTime - startTime) / 1000; // Convert milliseconds to seconds
+      console.log("API call took", timeDiffInSeconds, "seconds to complete");
+      setLoading(false);
       setDataFrame(response.data);
     } catch (error) {
       console.error("Error uploading file:", error);
-      setLoading(false); // Set loading state to false when response is received
+      setLoading(false);
     }
   };
 
@@ -55,7 +60,6 @@ const DataframeV2 = () => {
   };
 
   function mapToType(field) {
-    console.log(field?.constraints?.enum?.length);
     if (field?.constraints?.enum !== undefined) {
       return "category";
     }

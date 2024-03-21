@@ -8,6 +8,7 @@ import { mkConfig, generateCsv, download } from 'export-to-csv';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 const csvConfig = mkConfig({
+  filename: 'processed-dataframe',
   fieldSeparator: ',',
   decimalSeparator: '.',
   useKeysAsHeaders: true,

@@ -1,4 +1,5 @@
 import json
+import time
 import traceback
 import uuid
 
@@ -72,6 +73,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
         url_path="dataframes",
     )
     def create_dataframe(self, request, *args, **kwargs):
+        start_time = time.time()
         file_obj = request.FILES["file"]
 
         if not file_obj:
@@ -106,8 +108,11 @@ class ProcessDataFrameView(viewsets.ViewSet):
             json_processed_data = json.loads(
                 map_df_to_json(
                     processed_data
-                )  # TODO Save the data before to json instead
+                )
             )
+
+            end_time = time.time()
+            print(f'Request process time: {end_time - start_time}')
             response = {
                 "dataframe_id": to_save["dataframe_id"],
                 "version_id": init_version_id,
@@ -138,7 +143,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             operation_type = operation.get("type", None)
 
         prev_dataframe = get_dataframe(dataframe_id, version_id)
-        print(f'prev_dataframe_s3 {prev_dataframe}')
+        # print(f'prev_dataframe_s3 {prev_dataframe}')
 
         match operation_type:
             case "cast_to_numeric":

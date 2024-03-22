@@ -71,7 +71,7 @@ services:
     build:
       dockerfile: backend/Dockerfile
       context: .
-    command: celery --app=myproject worker --loglevel=info
+    command: celery --app=rhombus_ai worker --loglevel=info
     volumes:
       - ./:/home/user/app/
     env_file: backend/.env

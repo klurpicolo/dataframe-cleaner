@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   Button,
   Dialog,
@@ -10,6 +9,8 @@ import {
   TextField,
   CircularProgress,
 } from "@mui/material";
+import React, { useState } from "react";
+
 import DisplayDataFrame from "../component/DisplayDataFrame";
 import api from "../store/api";
 
@@ -47,17 +48,23 @@ const DataframeV2 = () => {
     }
   };
 
-  const handleColumnAction = async (column, operationType, script = null) => {
+  const handleColumnAction = async (
+    column,
+    operationType,
+    script = null,
+    to_fill = null,
+  ) => {
     const requestBody = {
       version_id: dataFrame.version_id,
-      column: column,
+      column,
       operation: {
         type: operationType,
-        script: script,
+        script,
+        to_fill,
       },
     };
     console.log(
-      "the request body is" + JSON.stringify(requestBody, undefined, 4),
+      `the request body is${JSON.stringify(requestBody, undefined, 4)}`,
     );
 
     try {
@@ -72,10 +79,13 @@ const DataframeV2 = () => {
   };
 
   const handleApplyScript = () => {
-    console.log(
-      "handleApplyScript" + pythonCode + " to " + applingScriptColumn,
+    console.log(`handleApplyScript${pythonCode} to ${applingScriptColumn}`);
+    handleColumnAction(
+      applingScriptColumn.field,
+      applingScriptColumn.operation_type,
+      applingScriptColumn.operation_type === "apply_script" ? pythonCode : null,
+      applingScriptColumn.operation_type === "fill_null" ? pythonCode : null,
     );
-    handleColumnAction(applingScriptColumn, "apply_script", pythonCode);
     setPythonCode("");
     setShowApplyScriptForm(false);
   };
@@ -96,20 +106,27 @@ const DataframeV2 = () => {
       {loading && <CircularProgress />}
 
       <Dialog
-        open={showApplyScriptForm}
-        onClose={() => setShowApplyScriptForm(false)}
         fullWidth
         maxWidth="lg"
+        open={showApplyScriptForm}
+        onClose={() => setShowApplyScriptForm(false)}
       >
-        <DialogTitle>Apply script {applingScriptColumn}</DialogTitle>
+        <DialogTitle>
+          {applingScriptColumn?.operation_type === "apply_script"
+            ? "Apply script to "
+            : "Fill null value with "}
+          {applingScriptColumn?.field}
+        </DialogTitle>
+
         <DialogContent>
           <TextField
+            fullWidth
+            helperText="Input the Python function in Lambda format with 'x' as input, for example x+2"
             label="Python Code"
             multiline
             rows={10}
-            variant="outlined"
-            fullWidth
             value={pythonCode}
+            variant="filled"
             onChange={(e) => setPythonCode(e.target.value)}
           />
         </DialogContent>
@@ -128,7 +145,7 @@ const DataframeV2 = () => {
             data={dataFrame.data.data}
             schema={dataFrame.data.schema.fields.map((field) => ({
               accessorKey: field.name, // TODO fix issue with column contain .
-              header: field.name + "[" + mapToType(field) + "]", //TODO find the better way to display data type
+              header: `${field.name}[${mapToType(field)}]`, // TODO find the better way to display data type
               renderColumnActionsMenuItems: ({
                 closeMenu,
                 internalColumnMenuItems,
@@ -136,7 +153,7 @@ const DataframeV2 = () => {
                 ...internalColumnMenuItems,
                 <Divider key="divider-1" />,
                 <MenuItem
-                  key={"cast_to_numeric"}
+                  key="cast_to_numeric"
                   onClick={() => {
                     handleColumnAction(field.name, "cast_to_numeric");
                     closeMenu();
@@ -145,7 +162,7 @@ const DataframeV2 = () => {
                   Cast to Numeric
                 </MenuItem>,
                 <MenuItem
-                  key={"cast_to_string"}
+                  key="cast_to_string"
                   onClick={() => {
                     handleColumnAction(field.name, "cast_to_string");
                     closeMenu();
@@ -154,7 +171,7 @@ const DataframeV2 = () => {
                   Cast to String
                 </MenuItem>,
                 <MenuItem
-                  key={"cast_to_datetime"}
+                  key="cast_to_datetime"
                   onClick={() => {
                     handleColumnAction(field.name, "cast_to_datetime");
                     closeMenu();
@@ -163,7 +180,7 @@ const DataframeV2 = () => {
                   Cast to Datetime
                 </MenuItem>,
                 <MenuItem
-                  key={"cast_to_boolean"}
+                  key="cast_to_boolean"
                   onClick={() => {
                     handleColumnAction(field.name, "cast_to_boolean");
                     closeMenu();
@@ -172,14 +189,30 @@ const DataframeV2 = () => {
                   Cast to Boolean
                 </MenuItem>,
                 <MenuItem
-                  key={"apply_function"}
+                  key="apply_script"
                   onClick={() => {
                     setShowApplyScriptForm(true);
-                    setApplingScriptColumn(field.name);
+                    setApplingScriptColumn({
+                      operation_type: "apply_script",
+                      field: field.name,
+                    });
                     closeMenu();
                   }}
                 >
                   Apply function
+                </MenuItem>,
+                <MenuItem
+                  key="fill_null"
+                  onClick={() => {
+                    setShowApplyScriptForm(true);
+                    setApplingScriptColumn({
+                      operation_type: "fill_null",
+                      field: field.name,
+                    });
+                    closeMenu();
+                  }}
+                >
+                  Fill null value
                 </MenuItem>,
               ],
               size: 150,

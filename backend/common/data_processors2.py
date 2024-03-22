@@ -90,6 +90,24 @@ def process_operation_cast_to(
             prev_df[col] = prev_df[col].apply(bool)
     return prev_df
 
+def process_operation_fill_null(
+    prev_df: pd.DataFrame, col: str, to_fill: str
+) -> pd.DataFrame:
+    col_dtype = prev_df[col].dtype
+    # Convert the 'to_fill' value to the type of the column
+    if col_dtype == 'object':
+        to_fill_converted = str(to_fill)
+    elif col_dtype == 'int':
+        to_fill_converted = int(to_fill)
+    elif col_dtype == 'float':
+        to_fill_converted = float(to_fill)
+    elif col_dtype == 'datetime64[ns]':
+        to_fill_converted = pd.to_datetime(to_fill)
+    else:
+        raise TypeError("Unsupported column data type")
+    prev_df[col].fillna(to_fill_converted, inplace=True)
+    return prev_df
+
 
 def map_df_to_json(df: pd.DataFrame) -> str:
     return df.to_json(orient="table")

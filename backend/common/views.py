@@ -18,6 +18,7 @@ from .data_processors2 import (
     map_df_to_json,
     process_operation_apply_script,
     process_operation_cast_to,
+    process_operation_fill_null,
 )
 from .minio_client import get_dataframe, upload_dataframe
 
@@ -154,7 +155,12 @@ class ProcessDataFrameView(viewsets.ViewSet):
             processed_dataframe = process_operation_apply_script(
                 prev_dataframe, column, raw_script
             )
-        else:
+        elif operation_type == 'fill_null':
+            to_fill = operation.get('to_fill', None)
+            processed_dataframe = process_operation_fill_null(
+                prev_dataframe, column, to_fill
+            )
+        else :
             processed_dataframe = process_operation_cast_to(
                 prev_dataframe, column, operation_type
             )
@@ -186,3 +192,11 @@ class ProcessDataFrameView(viewsets.ViewSet):
             "data": updated_dataframe,
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # @action(
+    #     detail=False,
+    #     methods=["get"],
+    #     permission_classes=[AllowAny],
+    #     url_path="dataframes",
+    # )
+    # def get_dataframe(self, request, *arg, **kwargs):

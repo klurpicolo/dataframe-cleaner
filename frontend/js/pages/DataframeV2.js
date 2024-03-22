@@ -19,8 +19,8 @@ const DataframeV2 = () => {
   const [dataFrame, setDataFrame] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showApplyScriptForm, setShowApplyScriptForm] = useState(false);
-  const [applingScriptColumn, setApplingScriptColumn] = useState(null);
-  const [pythonCode, setPythonCode] = useState("");
+  const [operationAndColumn, setOperationAndColumn] = useState(null);
+  const [dialogInput, setDialogInput] = useState("");
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -79,14 +79,14 @@ const DataframeV2 = () => {
   };
 
   const handleApplyScript = () => {
-    console.log(`handleApplyScript${pythonCode} to ${applingScriptColumn}`);
+    console.log(`handleApplyScript${dialogInput} to ${operationAndColumn}`);
     handleColumnAction(
-      applingScriptColumn.field,
-      applingScriptColumn.operation_type,
-      applingScriptColumn.operation_type === "apply_script" ? pythonCode : null,
-      applingScriptColumn.operation_type === "fill_null" ? pythonCode : null,
+      operationAndColumn.field,
+      operationAndColumn.operation_type,
+      operationAndColumn.operation_type === "apply_script" ? dialogInput : null,
+      operationAndColumn.operation_type === "fill_null" ? dialogInput : null,
     );
-    setPythonCode("");
+    setDialogInput("");
     setShowApplyScriptForm(false);
   };
 
@@ -112,10 +112,10 @@ const DataframeV2 = () => {
         onClose={() => setShowApplyScriptForm(false)}
       >
         <DialogTitle>
-          {applingScriptColumn?.operation_type === "apply_script"
+          {operationAndColumn?.operation_type === "apply_script"
             ? "Apply script to "
             : "Fill null value with "}
-          {applingScriptColumn?.field}
+          {operationAndColumn?.field}
         </DialogTitle>
 
         <DialogContent>
@@ -125,9 +125,9 @@ const DataframeV2 = () => {
             label="Python Code"
             multiline
             rows={10}
-            value={pythonCode}
+            value={dialogInput}
             variant="filled"
-            onChange={(e) => setPythonCode(e.target.value)}
+            onChange={(e) => setDialogInput(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
@@ -192,7 +192,7 @@ const DataframeV2 = () => {
                   key="apply_script"
                   onClick={() => {
                     setShowApplyScriptForm(true);
-                    setApplingScriptColumn({
+                    setOperationAndColumn({
                       operation_type: "apply_script",
                       field: field.name,
                     });
@@ -205,7 +205,7 @@ const DataframeV2 = () => {
                   key="fill_null"
                   onClick={() => {
                     setShowApplyScriptForm(true);
-                    setApplingScriptColumn({
+                    setOperationAndColumn({
                       operation_type: "fill_null",
                       field: field.name,
                     });

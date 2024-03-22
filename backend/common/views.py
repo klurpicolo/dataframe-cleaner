@@ -21,7 +21,7 @@ from .data_processors2 import (
     process_operation_fill_null,
 )
 from .minio_client import get_dataframe, upload_dataframe
-from .mongo_client import save_to_mongo, get_dataframe_by_id, update_dataframe, insert_version
+from .mongo_client import get_dataframe_by_id, insert_version, save_to_mongo, update_dataframe
 
 
 class IndexView(generic.TemplateView):

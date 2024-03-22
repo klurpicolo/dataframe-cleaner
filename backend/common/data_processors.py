@@ -1,17 +1,20 @@
 import json
 import math
+import concurrent
+import time
 
 import pandas as pd
 
 
 def infer_col(col: pd.Series) -> str:
+    start_time = time.time()
     infer_type = pd.api.types.infer_dtype(col, skipna=True)
     print(f"infer type from pandas is {infer_type}")
     if infer_type != "string" and infer_type != "mixed":
         print(f"try to cast type to {infer_type}")
         return col
 
-    try_to_date = pd.to_datetime(col, errors="coerce")
+    try_to_date = pd.to_datetime(col, errors="coerce", exact=False)
     date_na_cnt = (pd.isna(try_to_date)).sum()
     print(f"date_na_cnt is {date_na_cnt}")
     try_to_int = pd.to_numeric(col, errors="coerce")
@@ -23,23 +26,18 @@ def infer_col(col: pd.Series) -> str:
     if int_na_cnt / len(col) < 0.05:
         return try_to_int
 
-    # try_to_date_delta = pd.to_timedelta(col, errors='coerce')
-    # date_delta_na_cnt = (pd.isna(try_to_date_delta)).sum()
-
     if len(col.unique()) / len(col) < 0.5:
         return pd.Categorical(col)
-
-    # try_to_date_delta = pd.to_timedelta(col, errors='coerce')
-    # date_delta_na_cnt = (pd.isna(try_to_date_delta)).sum()
 
     all_possible = {
         date_na_cnt: try_to_date,
         int_na_cnt: try_to_int,
-        # date_delta_na_cnt: try_to_date_delta
     }
 
     sorted_all = sorted(all_possible.items())
     na_cnt, most_not_na = sorted_all[0]
+    end_time = time.time()
+    print(f"Col infer process for {col.name}: {end_time - start_time}")
     if na_cnt / len(col) < 0.2:  # the na is less than 10%
         return most_not_na
     else:
@@ -47,9 +45,19 @@ def infer_col(col: pd.Series) -> str:
 
 
 def infer_df(df: pd.DataFrame):
+    # processed = pd.DataFrame()
+    # for col in df.columns:
+    #     processed[col] = infer_col(df[col])
+    # return processed
     processed = pd.DataFrame()
-    for col in df.columns:
-        processed[col] = infer_col(df[col])
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(infer_col, df[col]): col for col in df.columns}
+        for future in concurrent.futures.as_completed(futures):
+            col = futures[future]
+            try:
+                processed[col] = future.result()
+            except Exception as exc:
+                print(f'Column {col} processing failed: {exc}')
     return processed
 
 

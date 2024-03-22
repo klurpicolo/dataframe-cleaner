@@ -109,7 +109,10 @@ const DataframeV2 = () => {
         fullWidth
         maxWidth="lg"
         open={showApplyScriptForm}
-        onClose={() => setShowApplyScriptForm(false)}
+        onClose={() => {
+          setDialogInput("");
+          setShowApplyScriptForm(false);
+        }}
       >
         <DialogTitle>
           {operationAndColumn?.operation_type === "apply_script"
@@ -121,7 +124,11 @@ const DataframeV2 = () => {
         <DialogContent>
           <TextField
             fullWidth
-            helperText="Input the Python function in Lambda format with 'x' as input, for example x+2"
+            helperText={
+              operationAndColumn?.operation_type === "apply_script"
+                ? "Input the Python function in Lambda format with 'x' as input, for example x+2"
+                : "Input the value to fill null value with, it should have the same type as the column"
+            }
             label="Python Code"
             multiline
             rows={10}

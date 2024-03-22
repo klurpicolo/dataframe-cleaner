@@ -193,10 +193,28 @@ class ProcessDataFrameView(viewsets.ViewSet):
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
-    # @action(
-    #     detail=False,
-    #     methods=["get"],
-    #     permission_classes=[AllowAny],
-    #     url_path="dataframes",
-    # )
-    # def get_dataframe(self, request, *arg, **kwargs):
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[AllowAny],
+        url_path="dataframes/(?P<dataframe_id>[^/.]+)",
+    )
+    def get_dataframe(self, request, *arg, **kwargs):
+        dataframe_id = kwargs.get("dataframe_id")
+        if dataframe_id is None:
+            return Response(
+                {
+                    "error": "Missing parameters. Please provide all required parameters."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        query_filter = {"dataframe_id": dataframe_id}
+        dataframe = collection.find_one(query_filter, {'_id': False})
+        if dataframe is None:
+            return Response(
+                {
+                    "error": "Dataframe id is not found"
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(dataframe, status=status.HTTP_200_OK)

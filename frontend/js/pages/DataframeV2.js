@@ -102,7 +102,9 @@ const DataframeV2 = () => {
       <h1>Dataframe V2</h1>
       <h2>Upload CSV or Excel File</h2>
       <input type="file" onChange={handleFileChange} />
-      <button onClick={handleFileUpload}>Upload</button>
+      <button type="submit" onClick={handleFileUpload}>
+        Upload
+      </button>
       {loading && <CircularProgress />}
 
       <Dialog

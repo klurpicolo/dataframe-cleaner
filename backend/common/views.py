@@ -21,6 +21,7 @@ from .data_processors2 import (
     process_operation_fill_null,
 )
 from .minio_client import get_dataframe, upload_dataframe
+from .mongo_client import save_to_mongo, get_dataframe_by_id, update_dataframe, insert_version
 
 
 class IndexView(generic.TemplateView):
@@ -40,26 +41,6 @@ class RestViewSet(viewsets.ViewSet):
                 "result": "This message comes from the backend. "
                 "If you're seeing this, the REST API is working!"
             },
-            status=status.HTTP_200_OK,
-        )
-
-
-client = pymongo.MongoClient("mongodb://localhost:27017/")
-db = client["my_mongodb_database"]
-collection = db["my_collection"]
-
-
-class SaveMongo(viewsets.ViewSet):
-    @action(
-        detail=False,
-        methods=["post"],
-        permission_classes=[AllowAny],
-        url_path="mongo-save",
-    )
-    def demo_save(self, request):
-        saved = collection.insert_one({"data": "klue"})
-        return Response(
-            {"result": f"{saved}"},
             status=status.HTTP_200_OK,
         )
 
@@ -106,7 +87,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                     {"version_id": init_version_id, "operation": "initialize"}
                 ],
             }
-            collection.insert_one(to_save)
+            save_to_mongo(to_save)
             upload_dataframe(to_save["dataframe_id"], init_version_id, processed_data)
             json_processed_data = json.loads(map_df_to_json(processed_data))
 
@@ -168,7 +149,6 @@ class ProcessDataFrameView(viewsets.ViewSet):
         updated_dataframe = json.loads(map_df_to_json(processed_dataframe))
 
         updated_version_id = str(uuid.uuid4())
-        update_filter = {"dataframe_id": dataframe_id}
         update = {
             "$push": {
                 "versions": {
@@ -180,7 +160,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             }
         }
 
-        collection.find_one_and_update(update_filter, update)
+        insert_version(dataframe_id, update)
         upload_dataframe(dataframe_id, updated_version_id, prev_dataframe)
 
         response_data = {
@@ -208,8 +188,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        query_filter = {"dataframe_id": dataframe_id}
-        dataframe = collection.find_one(query_filter, {'_id': False})
+        dataframe = get_dataframe_by_id(dataframe_id)
         if dataframe is None:
             return Response(
                 {

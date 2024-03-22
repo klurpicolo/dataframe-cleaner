@@ -13,7 +13,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .data_processors2 import (
+from .data_processors import (
     infer_df,
     map_df_to_json,
     process_operation_apply_script,

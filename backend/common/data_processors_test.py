@@ -1,6 +1,8 @@
 import unittest
+
 import pandas as pd
-from data_processors2 import infer_df
+
+from backend.common.data_processors import infer_df
 
 
 class TestDataTypes(unittest.TestCase):

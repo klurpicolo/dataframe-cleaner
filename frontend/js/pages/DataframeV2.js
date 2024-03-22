@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   Dialog,
   Divider,
@@ -155,6 +156,17 @@ const DataframeV2 = () => {
             schema={dataFrame.data.schema.fields.map((field) => ({
               accessorKey: field.name, // TODO fix issue with column contain .
               header: `${field.name}[${mapToType(field)}]`, // TODO find the better way to display data type
+              Cell: (
+                { renderedCellValue }, // To support renderring boolean type
+              ) => (
+                <Box>
+                  {typeof renderedCellValue === "boolean" ? (
+                    <span>{renderedCellValue ? "true" : "false"}</span>
+                  ) : (
+                    <span>{renderedCellValue}</span>
+                  )}
+                </Box>
+              ),
               renderColumnActionsMenuItems: ({
                 closeMenu,
                 internalColumnMenuItems,

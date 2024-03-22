@@ -1,12 +1,14 @@
 import json
+import logging
 import time
 import traceback
 import uuid
+from io import BytesIO
 
+from django.http import FileResponse
 from django.views import generic
 
 import pandas as pd
-import pymongo
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -21,8 +23,9 @@ from .data_processors import (
     process_operation_fill_null,
 )
 from .minio_client import get_dataframe, upload_dataframe
-from .mongo_client import get_dataframe_by_id, insert_version, save_to_mongo, update_dataframe
+from .mongo_client import get_dataframe_by_id, insert_version, save_to_mongo
 
+logger = logging.getLogger(__name__)
 
 class IndexView(generic.TemplateView):
     template_name = "common/index.html"
@@ -92,7 +95,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             json_processed_data = json.loads(map_df_to_json(processed_data))
 
             end_time = time.time()
-            print(f"Request process time: {end_time - start_time}")
+            logger.info(f"Request process time: {end_time - start_time}")
             response = {
                 "dataframe_id": to_save["dataframe_id"],
                 "version_id": init_version_id,
@@ -100,7 +103,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             }
             return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
-            print(f"exception {e}")
+            logger.error(f"exception {e}")
             traceback.print_exception(e)
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -179,7 +182,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
         permission_classes=[AllowAny],
         url_path="dataframes/(?P<dataframe_id>[^/.]+)",
     )
-    def get_dataframe(self, request, *arg, **kwargs):
+    def get_dataframe_metadata(self, request, *arg, **kwargs):
         dataframe_id = kwargs.get("dataframe_id")
         if dataframe_id is None:
             return Response(
@@ -188,12 +191,27 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        dataframe = get_dataframe_by_id(dataframe_id)
-        if dataframe is None:
+        dataframe_meta = get_dataframe_by_id(dataframe_id)
+        if dataframe_meta is None:
             return Response(
                 {
                     "error": "Dataframe id is not found"
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response(dataframe, status=status.HTTP_200_OK)
+        return Response(dataframe_meta, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[AllowAny],
+        url_path="dataframes/(?P<dataframe_id>[^/.]+)/download/(?P<version_id>[^/.]+)",
+    )
+    def download_dataframe(self, request, *args, **kwargs):
+        dataframe_id = kwargs.get("dataframe_id")
+        version_id = kwargs.get("version_id")
+        dataframe = get_dataframe(dataframe_id, version_id)
+        buff = BytesIO()
+        dataframe.to_csv(path_or_buf=buff)
+        buff.seek(0)
+        return FileResponse(buff, filename="processed_data.csv", as_attachment=True)

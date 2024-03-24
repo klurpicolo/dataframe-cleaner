@@ -26,6 +26,7 @@ const DataframeV3 = () => {
   const [showApplyScriptForm, setShowApplyScriptForm] = useState(false);
   const [operationAndColumn, setOperationAndColumn] = useState(null);
   const [dialogInput, setDialogInput] = useState("");
+  const [errorDialog, setErrorDialog] = useState(null);
 
   const fetchDataFrameVersion = async (dataframe_id) => {
     console.log("callfetchDataFrameVersion");
@@ -89,12 +90,16 @@ const DataframeV3 = () => {
         },
       });
       const endTime = new Date();
-      const timeDiffInSeconds = (endTime - startTime) / 1000; // Convert milliseconds to seconds
+      const timeDiffInSeconds = (endTime - startTime) / 1000;
       console.log("API call took", timeDiffInSeconds, "seconds to complete");
       console.log("response is", response.data);
       setDataFrameId(response.data.dataframe_id);
     } catch (error) {
       console.error("Error uploading file:", error);
+      setLoading(false);
+      setErrorDialog(
+        `Error code ${error.response.status} with message ${error.response.data.message}`,
+      );
     }
   };
 
@@ -151,8 +156,8 @@ const DataframeV3 = () => {
     <>
       <div style={{ display: "flex" }}>
         <div style={{ marginRight: "20px" }}>
-          <h1>Dataframe V3</h1>
-          <h2>Upload CSV or Excel File</h2>
+          <h1>Dataframe Cleaner</h1>
+          <h3>Upload CSV or Excel File</h3>
           <input type="file" onChange={handleFileChange} />
           <button type="submit" onClick={handleFileUpload}>
             Upload
@@ -166,6 +171,29 @@ const DataframeV3 = () => {
           />
         </div>
       </div>
+
+      {errorDialog && (
+        <>
+          <Alert
+            severity="warning"
+            onClose={() => {
+              setErrorDialog(null);
+            }}
+          >
+            {errorDialog}
+          </Alert>
+          {/* <Alert
+            action={
+              <Button color="inherit" size="small">
+                UNDO
+              </Button>
+            }
+            severity="success"
+          >
+            This Alert uses a Button component for its action.
+          </Alert> */}
+        </>
+      )}
 
       <Dialog
         fullWidth

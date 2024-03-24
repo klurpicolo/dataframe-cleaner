@@ -138,7 +138,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
 
         if not file_obj:
             return Response(
-                {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -148,7 +148,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 df = pd.read_excel(file_obj)
             else:
                 return Response(
-                    {"error": "Unsupported file type, only support .csv, .xls, .xlsx"},
+                    {"message": "Unsupported file type, only support .csv, .xls, .xlsx"},
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 

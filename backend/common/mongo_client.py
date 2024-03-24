@@ -1,6 +1,7 @@
 import pymongo
 
 
+# This isn't not secure, just for sake of setup and prototype.
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 db = client["my_mongodb_database"]
 collection = db["dataframe_metadata"]

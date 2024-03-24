@@ -55,9 +55,9 @@ def process_dataframe_async(
     raw_script: str | None = None,
     to_fill: str | None = None,
 ):
-    if operation_type == "apply_script":
+    if operation_type == OperationType.APPLY_SCRIPT:
         processed_dataframe = process_operation_apply_script(df, column, raw_script)
-    elif operation_type == "fill_null":
+    elif operation_type == OperationType.FILL_NULL:
         processed_dataframe = process_operation_fill_null(df, column, to_fill)
     else:
         processed_dataframe = process_operation_cast_to(df, column, operation_type)

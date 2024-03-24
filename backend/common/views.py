@@ -23,11 +23,18 @@ from .data_processors import (
     process_operation_cast_to,
     process_operation_fill_null,
 )
+from .enum import OperationType, ProcessStatus
 from .minio_client import get_dataframe, upload_dataframe
-from .mongo_client import get_dataframe_by_id, insert_version, save_to_mongo, update_status
+from .mongo_client import (
+    get_dataframe_by_id,
+    insert_version,
+    save_to_mongo,
+    update_status,
+)
 
 
 logger = logging.getLogger(__name__)
+
 
 class IndexView(generic.TemplateView):
     template_name = "common/index.html"
@@ -36,23 +43,27 @@ class IndexView(generic.TemplateView):
 def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
     processed_data = infer_df(df)
     upload_dataframe(dataframe_id, version_id, processed_data)
-    update_status(dataframe_id, version_id, "processed")
+    update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
 
-def process_dataframe_async(df: pd.DataFrame, dataframe_id: str, updated_version_id: str, operation_type: str, column: str, raw_script: str | None = None, to_fill : str | None = None):
+
+def process_dataframe_async(
+    df: pd.DataFrame,
+    dataframe_id: str,
+    updated_version_id: str,
+    operation_type: str,
+    column: str,
+    raw_script: str | None = None,
+    to_fill: str | None = None,
+):
     if operation_type == "apply_script":
-        processed_dataframe = process_operation_apply_script(
-            df, column, raw_script
-        )
-    elif operation_type == 'fill_null':
-        processed_dataframe = process_operation_fill_null(
-            df, column, to_fill
-        )
-    else :
-        processed_dataframe = process_operation_cast_to(
-            df, column, operation_type
-        )
+        processed_dataframe = process_operation_apply_script(df, column, raw_script)
+    elif operation_type == "fill_null":
+        processed_dataframe = process_operation_fill_null(df, column, to_fill)
+    else:
+        processed_dataframe = process_operation_cast_to(df, column, operation_type)
     upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
-    update_status(dataframe_id, updated_version_id, "processed")
+    update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
+
 
 class ProcessDataFrameView(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
@@ -88,7 +99,10 @@ class ProcessDataFrameView(viewsets.ViewSet):
             to_save = {
                 "dataframe_id": str(uuid.uuid4()),
                 "versions": [
-                    {"version_id": init_version_id, "operation": "initialize"}
+                    {
+                        "version_id": init_version_id,
+                        "operation": OperationType.INITIALIZE,
+                    }
                 ],
             }
             save_to_mongo(to_save)
@@ -109,7 +123,6 @@ class ProcessDataFrameView(viewsets.ViewSet):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
     @action(
         detail=False,
@@ -141,14 +154,18 @@ class ProcessDataFrameView(viewsets.ViewSet):
             to_save = {
                 "dataframe_id": str(uuid.uuid4()),
                 "versions": [
-                    {"version_id": init_version_id, "operation": "initialize", "status": "processing"}
+                    {
+                        "version_id": init_version_id,
+                        "operation": OperationType.INITIALIZE,
+                        "status": ProcessStatus.PROCESSING,
+                    }
                 ],
             }
             save_to_mongo(to_save)
 
             process = multiprocessing.Process(
                 target=create_dataframe_async,
-                args=(df, to_save['dataframe_id'], init_version_id)
+                args=(df, to_save["dataframe_id"], init_version_id),
             )
             process.start()
 
@@ -157,7 +174,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             response = {
                 "dataframe_id": to_save["dataframe_id"],
                 "version_id": init_version_id,
-                "status": "processing",
+                "status": ProcessStatus.PROCESSING,
             }
             return Response(response, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
@@ -166,7 +183,6 @@ class ProcessDataFrameView(viewsets.ViewSet):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
     @action(
         detail=False,
@@ -193,17 +209,17 @@ class ProcessDataFrameView(viewsets.ViewSet):
             )
 
         raw_script = operation.get("script", None)
-        to_fill = operation.get('to_fill', None)
+        to_fill = operation.get("to_fill", None)
         prev_dataframe = get_dataframe(dataframe_id, version_id)
-        if operation_type == "apply_script":
+        if operation_type == OperationType.APPLY_SCRIPT:
             processed_dataframe = process_operation_apply_script(
                 prev_dataframe, column, raw_script
             )
-        elif operation_type == 'fill_null':
+        elif operation_type == OperationType.FILL_NULL:
             processed_dataframe = process_operation_fill_null(
                 prev_dataframe, column, to_fill
             )
-        else :
+        else:
             processed_dataframe = process_operation_cast_to(
                 prev_dataframe, column, operation_type
             )
@@ -257,7 +273,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             )
 
         raw_script = operation.get("script", None)
-        to_fill = operation.get('to_fill', None)
+        to_fill = operation.get("to_fill", None)
 
         updated_version_id = str(uuid.uuid4())
         update = {
@@ -266,20 +282,25 @@ class ProcessDataFrameView(viewsets.ViewSet):
             **({"script": raw_script} if raw_script is not None else {}),
             **({"to_fill": to_fill} if to_fill is not None else {}),
             "column": column,
-            "status": "processing"
+            "status": ProcessStatus.PROCESSING,
         }
         insert_version(dataframe_id, update)
 
         prev_dataframe = get_dataframe(dataframe_id, version_id)
 
         process = multiprocessing.Process(
-                target=process_dataframe_async,
-                args=(prev_dataframe, dataframe_id, updated_version_id, operation_type, column, raw_script, to_fill)
-            )
+            target=process_dataframe_async,
+            args=(
+                prev_dataframe,
+                dataframe_id,
+                updated_version_id,
+                operation_type,
+                column,
+                raw_script,
+                to_fill,
+            ),
+        )
         process.start()
-
-        # process_dataframe_async(prev_dataframe, dataframe_id, updated_version_id, operation_type, column, raw_script, to_fill)
-        # upload_dataframe(dataframe_id, updated_version_id, prev_dataframe)
 
         response_data = {
             "dataframe_id": dataframe_id,
@@ -287,10 +308,9 @@ class ProcessDataFrameView(viewsets.ViewSet):
             "version_id": updated_version_id,
             "column": column,
             "operation_type": operation_type,
-            "status": "processing",
+            "status": ProcessStatus.PROCESSING,
         }
         return Response(response_data, status=status.HTTP_202_ACCEPTED)
-
 
     @action(
         detail=False,
@@ -310,9 +330,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
         dataframe_meta = get_dataframe_by_id(dataframe_id)
         if dataframe_meta is None:
             return Response(
-                {
-                    "error": "Dataframe id is not found"
-                },
+                {"error": "Dataframe id is not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(dataframe_meta, status=status.HTTP_200_OK)
@@ -336,10 +354,9 @@ class ProcessDataFrameView(viewsets.ViewSet):
             "version_id": version_id,
             "data": json_processed_data,
             "actual_size": actual_size,
-            "limit_size": limit_size if actual_size > limit_size else actual_size
+            "limit_size": limit_size if actual_size > limit_size else actual_size,
         }
         return Response(response, status=status.HTTP_201_CREATED)
-
 
     @action(
         detail=False,

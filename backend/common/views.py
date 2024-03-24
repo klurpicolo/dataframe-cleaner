@@ -42,9 +42,14 @@ class IndexView(generic.TemplateView):
 
 
 def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
-    processed_data = infer_df_parallel(df)
-    upload_dataframe(dataframe_id, version_id, processed_data)
-    update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
+    try:
+        processed_data = infer_df_parallel(df)
+        upload_dataframe(dataframe_id, version_id, processed_data)
+        update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
+    except Exception as e:
+        logger.error('exception during create_dataframe_async, %s', e.__cause__)
+        update_status(dataframe_id, version_id, ProcessStatus.FAIL)
+
 
 
 def process_dataframe_async(
@@ -56,14 +61,18 @@ def process_dataframe_async(
     raw_script: str | None = None,
     to_fill: str | None = None,
 ):
-    if operation_type == OperationType.APPLY_SCRIPT:
-        processed_dataframe = process_operation_apply_script(df, column, raw_script)
-    elif operation_type == OperationType.FILL_NULL:
-        processed_dataframe = process_operation_fill_null(df, column, to_fill)
-    else:
-        processed_dataframe = process_operation_cast_to(df, column, operation_type)
-    upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
-    update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
+    try:
+        if operation_type == OperationType.APPLY_SCRIPT:
+            processed_dataframe = process_operation_apply_script(df, column, raw_script)
+        elif operation_type == OperationType.FILL_NULL:
+            processed_dataframe = process_operation_fill_null(df, column, to_fill)
+        else:
+            processed_dataframe = process_operation_cast_to(df, column, operation_type)
+        upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
+        update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
+    except Exception as e:
+        logger.error('exception during process_dataframe_async, %s', e.__cause__)
+        update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)
 
 
 class ProcessDataFrameView(viewsets.ViewSet):
@@ -81,7 +90,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
 
         if not file_obj:
             return Response(
-                {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
+                {"message": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
@@ -91,7 +100,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 df = pd.read_excel(file_obj)
             else:
                 return Response(
-                    {"error": "Unsupported file type, only support .csv, .xls, .xlsx"},
+                    {"message": "Unsupported file type, only support .csv, .xls, .xlsx"},
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 
@@ -123,7 +132,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             logger.error("exception %s", e)
             traceback.print_exception(e)
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(
@@ -183,7 +192,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             logger.error("exception %s", e)
             traceback.print_exception(e)
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(
@@ -205,7 +214,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
         if None in [dataframe_id, version_id, column, operation, operation_type]:
             return Response(
                 {
-                    "error": "Missing parameters. Please provide all required parameters."
+                    "message": "Missing parameters. Please provide all required parameters."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -269,7 +278,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
         if None in [dataframe_id, version_id, column, operation, operation_type]:
             return Response(
                 {
-                    "error": "Missing parameters. Please provide all required parameters."
+                    "message": "Missing parameters. Please provide all required parameters."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -325,14 +334,14 @@ class ProcessDataFrameView(viewsets.ViewSet):
         if dataframe_id is None:
             return Response(
                 {
-                    "error": "Missing parameters. Please provide all required parameters."
+                    "message": "Missing parameters. Please provide all required parameters."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         dataframe_meta = get_dataframe_by_id(dataframe_id)
         if dataframe_meta is None:
             return Response(
-                {"error": "Dataframe id is not found"},
+                {"message": "Dataframe id is not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(dataframe_meta, status=status.HTTP_200_OK)

@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import api from "../store/api";
 
 const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
-  const [downloadingVersion, setDownloadingVersion] = useState(null); // State to track downloading version
+  const [downloadingVersion, setDownloadingVersion] = useState(null);
 
   const handleDownload = async (dataframe_id, version_id) => {
     try {
@@ -33,7 +33,7 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
       {
         accessorKey: "version_id",
         header: "Version",
-        size: 50,
+        maxSize: 80,
       },
       {
         accessorKey: "operation",
@@ -50,18 +50,33 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
   );
 
   const memoizedData = useMemo(() => versionStatus, [versionStatus]);
+
   return (
     <MaterialReactTable
       columns={columns}
       data={memoizedData}
       displayColumnDefOptions={{
         "mrt-row-actions": {
-          size: 180, // if using layoutMode that is not 'semantic', the columns will not auto-size, so you need to set the size manually
           grow: false,
         },
       }}
+      enableColumnActions={false}
+      enableColumnFilters={false}
+      enableColumnOrdering={false}
       enableRowActions
+      enableSorting={false}
+      initialState={{
+        pagination: { pageSize: 3, pageIndex: 0 },
+        showGlobalFilter: false,
+
+        density: "compact",
+      }}
       layoutMode="grid"
+      muiPaginationProps={{
+        rowsPerPageOptions: [3, 5],
+        variant: "outlined",
+      }}
+      paginationDisplayMode="pages"
       renderRowActions={({ row }) => (
         <Box sx={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
           {downloadingVersion === row.original.version_id ? (
@@ -78,6 +93,7 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
           )}
         </Box>
       )}
+      rowsPerPageOptions={[5]}
     />
   );
 };

@@ -9,6 +9,7 @@ from django.http import FileResponse
 from django.views import generic
 
 import pandas as pd
+from celery import shared_task
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -23,7 +24,8 @@ from .data_processors import (
     process_operation_fill_null,
 )
 from .minio_client import get_dataframe, upload_dataframe
-from .mongo_client import get_dataframe_by_id, insert_version, save_to_mongo
+from .mongo_client import get_dataframe_by_id, insert_version, save_to_mongo, update_status
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +50,11 @@ class RestViewSet(viewsets.ViewSet):
         )
 
 
-def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    inferred_df = infer_df(df)
-    return inferred_df
-
+@shared_task
+def process_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
+    processed_data = infer_df(df)
+    upload_dataframe(dataframe_id, version_id, processed_data)
+    update_status(dataframe_id, version_id, "processed")
 
 class ProcessDataFrameView(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
@@ -82,7 +85,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 
-            processed_data = process_dataframe(df)
+            processed_data = infer_df(df)
             init_version_id = str(uuid.uuid4())
             to_save = {
                 "dataframe_id": str(uuid.uuid4()),
@@ -108,6 +111,63 @@ class ProcessDataFrameView(viewsets.ViewSet):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    # save status to mongo first
+    # > then return to client with status wait
+    # > client setup long pooling to get data later
+    # async process the pandas and update mongo later
+    # > then update status from processing to processed
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[AllowAny],
+        url_path="dataframes-async",
+    )
+    def create_dataframe_async(self, request, *args, **kwargs):
+        start_time = time.time()
+        file_obj = request.FILES["file"]
+
+        if not file_obj:
+            return Response(
+                {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            if file_obj.name.endswith(".csv"):
+                df = pd.read_csv(file_obj)
+            elif file_obj.name.endswith(".xls") or file_obj.name.endswith(".xlsx"):
+                df = pd.read_excel(file_obj)
+            else:
+                return Response(
+                    {"error": "Unsupported file type"},
+                    status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                )
+
+            init_version_id = str(uuid.uuid4())
+            to_save = {
+                "dataframe_id": str(uuid.uuid4()),
+                "versions": [
+                    {"version_id": init_version_id, "operation": "initialize", "status": "processing"}
+                ],
+            }
+            save_to_mongo(to_save)
+            process_dataframe_async(df, to_save['dataframe_id'], init_version_id)
+
+            end_time = time.time()
+            logger.info(f"Request process time: {end_time - start_time}")
+            response = {
+                "dataframe_id": to_save["dataframe_id"],
+                "version_id": init_version_id,
+                "status": "processing",
+            }
+            return Response(response, status=status.HTTP_202_ACCEPTED)
+        except Exception as e:
+            logger.error(f"exception {e}")
+            traceback.print_exception(e)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
     @action(
         detail=False,
@@ -200,6 +260,25 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(dataframe_meta, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[AllowAny],
+        url_path="dataframes/(?P<dataframe_id>[^/.]+)/versions/(?P<version_id>[^/.]+)",
+    )
+    def get_dataframe_by_id_and_version(self, request, *args, **kwargs):
+        dataframe_id = kwargs.get("dataframe_id")
+        version_id = kwargs.get("version_id")
+        dataframe = get_dataframe(dataframe_id, version_id)
+        json_processed_data = json.loads(map_df_to_json(dataframe))
+        response = {
+            "dataframe_id": dataframe_id,
+            "version_id": version_id,
+            "data": json_processed_data,
+        }
+        return Response(response, status=status.HTTP_201_CREATED)
+
 
     @action(
         detail=False,

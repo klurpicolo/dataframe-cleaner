@@ -16,3 +16,9 @@ def update_dataframe(dataframe_id, update):
 
 def insert_version(dataframe_id, version_data):
     collection.update_one({"dataframe_id": dataframe_id}, {"$push": {"versions": version_data}})
+
+def update_status(dataframe_id: str, version_id: str, status: str):
+    collection.update_one(
+        {"dataframe_id": dataframe_id, "versions.version_id": version_id},
+        {"$set": {"versions.$.status": status}}
+    )

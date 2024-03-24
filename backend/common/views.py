@@ -1,5 +1,6 @@
 import json
 import logging
+import multiprocessing
 import time
 import traceback
 import uuid
@@ -9,7 +10,6 @@ from django.http import FileResponse
 from django.views import generic
 
 import pandas as pd
-from celery import shared_task
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -50,11 +50,26 @@ class RestViewSet(viewsets.ViewSet):
         )
 
 
-@shared_task
-def process_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
+def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
     processed_data = infer_df(df)
     upload_dataframe(dataframe_id, version_id, processed_data)
     update_status(dataframe_id, version_id, "processed")
+
+def process_dataframe_async(df: pd.DataFrame, dataframe_id: str, updated_version_id: str, operation_type: str, column: str, raw_script: str | None = None, to_fill : str | None = None):
+    if operation_type == "apply_script":
+        processed_dataframe = process_operation_apply_script(
+            df, column, raw_script
+        )
+    elif operation_type == 'fill_null':
+        processed_dataframe = process_operation_fill_null(
+            df, column, to_fill
+        )
+    else :
+        processed_dataframe = process_operation_cast_to(
+            df, column, operation_type
+        )
+    upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
+    update_status(dataframe_id, updated_version_id, "processed")
 
 class ProcessDataFrameView(viewsets.ViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
@@ -112,11 +127,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    # save status to mongo first
-    # > then return to client with status wait
-    # > client setup long pooling to get data later
-    # async process the pandas and update mongo later
-    # > then update status from processing to processed
+
     @action(
         detail=False,
         methods=["post"],
@@ -151,7 +162,12 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 ],
             }
             save_to_mongo(to_save)
-            process_dataframe_async(df, to_save['dataframe_id'], init_version_id)
+
+            process = multiprocessing.Process(
+                target=create_dataframe_async,
+                args=(df, to_save['dataframe_id'], init_version_id)
+            )
+            process.start()
 
             end_time = time.time()
             logger.info(f"Request process time: {end_time - start_time}")
@@ -194,13 +210,13 @@ class ProcessDataFrameView(viewsets.ViewSet):
             )
 
         raw_script = operation.get("script", None)
+        to_fill = operation.get('to_fill', None)
         prev_dataframe = get_dataframe(dataframe_id, version_id)
         if operation_type == "apply_script":
             processed_dataframe = process_operation_apply_script(
                 prev_dataframe, column, raw_script
             )
         elif operation_type == 'fill_null':
-            to_fill = operation.get('to_fill', None)
             processed_dataframe = process_operation_fill_null(
                 prev_dataframe, column, to_fill
             )
@@ -213,14 +229,11 @@ class ProcessDataFrameView(viewsets.ViewSet):
 
         updated_version_id = str(uuid.uuid4())
         update = {
-            "$push": {
-                "versions": {
-                    "version_id": updated_version_id,
-                    "operation": operation_type,
-                    **({"script": raw_script} if raw_script is not None else {}),
-                    "column": column,
-                }
-            }
+            "version_id": updated_version_id,
+            "operation": operation_type,
+            **({"script": raw_script} if raw_script is not None else {}),
+            **({"to_fill": to_fill} if to_fill is not None else {}),
+            "column": column,
         }
 
         insert_version(dataframe_id, update)
@@ -235,6 +248,66 @@ class ProcessDataFrameView(viewsets.ViewSet):
             "data": updated_dataframe,
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[AllowAny],
+        url_path="dataframes/(?P<dataframe_id>[^/.]+)/process-async",
+    )
+    def process_dataframe_async(self, request, *args, **kwargs):
+        dataframe_id = kwargs.get("dataframe_id")
+        request_data = request.data
+        version_id = request_data.get("version_id", None)
+        column = request_data.get("column", None)
+        operation = request_data.get("operation", None)
+        operation_type = None
+        if operation:
+            operation_type = operation.get("type", None)
+
+        if None in [dataframe_id, version_id, column, operation, operation_type]:
+            return Response(
+                {
+                    "error": "Missing parameters. Please provide all required parameters."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_script = operation.get("script", None)
+        to_fill = operation.get('to_fill', None)
+
+        updated_version_id = str(uuid.uuid4())
+        update = {
+            "version_id": updated_version_id,
+            "operation": operation_type,
+            **({"script": raw_script} if raw_script is not None else {}),
+            **({"to_fill": to_fill} if to_fill is not None else {}),
+            "column": column,
+            "status": "processing"
+        }
+        insert_version(dataframe_id, update)
+
+        prev_dataframe = get_dataframe(dataframe_id, version_id)
+
+        process = multiprocessing.Process(
+                target=process_dataframe_async,
+                args=(prev_dataframe, dataframe_id, updated_version_id, operation_type, column, raw_script, to_fill)
+            )
+        process.start()
+
+        # process_dataframe_async(prev_dataframe, dataframe_id, updated_version_id, operation_type, column, raw_script, to_fill)
+        # upload_dataframe(dataframe_id, updated_version_id, prev_dataframe)
+
+        response_data = {
+            "dataframe_id": dataframe_id,
+            "previous_version_id": version_id,
+            "version_id": updated_version_id,
+            "column": column,
+            "operation_type": operation_type,
+            "status": "processing",
+        }
+        return Response(response_data, status=status.HTTP_202_ACCEPTED)
+
 
     @action(
         detail=False,
@@ -271,11 +344,13 @@ class ProcessDataFrameView(viewsets.ViewSet):
         dataframe_id = kwargs.get("dataframe_id")
         version_id = kwargs.get("version_id")
         dataframe = get_dataframe(dataframe_id, version_id)
-        json_processed_data = json.loads(map_df_to_json(dataframe))
+        # limit code display on FE
+        json_processed_data = json.loads(map_df_to_json(dataframe[:100000]))
         response = {
             "dataframe_id": dataframe_id,
             "version_id": version_id,
             "data": json_processed_data,
+            "size_limit": 100000
         }
         return Response(response, status=status.HTTP_201_CREATED)
 

@@ -39,7 +39,6 @@ const DataframeV3 = () => {
         const lastVersion =
           response.data.versions[response.data.versions.length - 1];
         const { version_id } = lastVersion;
-        // Perform another API fetch with dataframe_id and version_id
         await fetchDataFrame(dataframe_id, version_id);
       }
     } catch (error) {
@@ -81,6 +80,7 @@ const DataframeV3 = () => {
     formData.append("file", file);
     try {
       setLoading(true);
+      setDataFrameId(null);
       const startTime = new Date();
       const response = await api.post("/api/rest/dataframes-async/", formData, {
         headers: {
@@ -118,13 +118,14 @@ const DataframeV3 = () => {
     console.log(
       `the request body is${JSON.stringify(requestBody, undefined, 4)}`,
     );
-
     try {
+      setLoading(true);
       const response = await api.post(
-        `/api/rest/dataframes/${dataFrame.dataframe_id}/process/`,
+        `/api/rest/dataframes/${dataFrame.dataframe_id}/process-async/`,
         requestBody,
       );
-      setDataFrame(response.data);
+      // setDataFrame(response.data);
+      fetchDataFrameVersion(dataFrameId);
     } catch (error) {
       console.error("Error processing DataFrame:", error);
     }
@@ -163,6 +164,7 @@ const DataframeV3 = () => {
         </div>
         <div style={{ width: "100%" }}>
           <DisplayDataFrameMetadata
+            dataframeId={dataFrameMeta.dataframe_id}
             versionStatus={dataFrameMeta?.versions ?? []}
           />
         </div>
@@ -209,7 +211,6 @@ const DataframeV3 = () => {
       {dataFrame && (
         <>
           <p>dataframe id: {dataFrame.dataframe_id}</p>
-          <p>previous version id: {dataFrame.previous_version_id}</p>
           <p>version id: {dataFrame.version_id}</p>
           <DisplayDataFrame
             data={dataFrame.data.data}

@@ -1,13 +1,33 @@
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Email as EmailIcon,
-} from "@mui/icons-material";
-import { Box, IconButton } from "@mui/material";
+import { Download as DownloadIcon } from "@mui/icons-material";
+import { Box, CircularProgress, IconButton } from "@mui/material";
 import { MaterialReactTable } from "material-react-table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-const DisplayDataFrameMetadata = ({ versionStatus }) => {
+import api from "../store/api";
+
+const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
+  const [downloadingVersion, setDownloadingVersion] = useState(null); // State to track downloading version
+
+  const handleDownload = async (dataframe_id, version_id) => {
+    try {
+      setDownloadingVersion(version_id); // Set downloading version
+      const response = await api.get(
+        `/api/rest/dataframes/${dataframe_id}/download/${version_id}`,
+        { responseType: "blob" },
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `processed_data_${version_id}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      setDownloadingVersion(null); // Reset downloading version
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      setDownloadingVersion(null); // Reset downloading version
+    }
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -44,33 +64,18 @@ const DisplayDataFrameMetadata = ({ versionStatus }) => {
       layoutMode="grid"
       renderRowActions={({ row, table }) => (
         <Box sx={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
-          <IconButton
-            color="primary"
-            onClick={() =>
-              window.open(
-                `mailto:kevinvandy@mailinator.com?subject=Hello ${row.original.firstName}!`,
-              )
-            }
-          >
-            <EmailIcon />
-          </IconButton>
-          <IconButton
-            color="secondary"
-            onClick={() => {
-              table.setEditingRow(row);
-            }}
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            color="error"
-            onClick={() => {
-              data.splice(row.index, 1); // assuming simple data table
-              setData([...data]);
-            }}
-          >
-            <DeleteIcon />
-          </IconButton>
+          {downloadingVersion === row.original.version_id ? (
+            <CircularProgress color="primary" size={24} />
+          ) : (
+            <IconButton
+              color="primary"
+              onClick={() =>
+                handleDownload(dataframeId, row.original.version_id)
+              }
+            >
+              <DownloadIcon />
+            </IconButton>
+          )}
         </Box>
       )}
     />

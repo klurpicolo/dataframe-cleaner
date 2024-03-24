@@ -18,6 +18,7 @@ from rest_framework.response import Response
 
 from .data_processors import (
     infer_df,
+    infer_df_parallel,
     map_df_to_json,
     process_operation_apply_script,
     process_operation_cast_to,
@@ -41,7 +42,7 @@ class IndexView(generic.TemplateView):
 
 
 def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
-    processed_data = infer_df(df)
+    processed_data = infer_df_parallel(df)
     upload_dataframe(dataframe_id, version_id, processed_data)
     update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
 
@@ -90,7 +91,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 df = pd.read_excel(file_obj)
             else:
                 return Response(
-                    {"error": "Unsupported file type"},
+                    {"error": "Unsupported file type, only support .csv, .xls, .xlsx"},
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 
@@ -110,7 +111,8 @@ class ProcessDataFrameView(viewsets.ViewSet):
             json_processed_data = json.loads(map_df_to_json(processed_data))
 
             end_time = time.time()
-            logger.info(f"Request process time: {end_time - start_time}")
+            logger.info("Request process time: %s", end_time - start_time)
+
             response = {
                 "dataframe_id": to_save["dataframe_id"],
                 "version_id": init_version_id,
@@ -118,7 +120,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             }
             return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
-            logger.error(f"exception {e}")
+            logger.error("exception %s", e)
             traceback.print_exception(e)
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -146,7 +148,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 df = pd.read_excel(file_obj)
             else:
                 return Response(
-                    {"error": "Unsupported file type"},
+                    {"error": "Unsupported file type, only support .csv, .xls, .xlsx"},
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 
@@ -170,7 +172,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             process.start()
 
             end_time = time.time()
-            logger.info(f"Request process time: {end_time - start_time}")
+            logger.info("Request process time: %s", end_time - start_time)
             response = {
                 "dataframe_id": to_save["dataframe_id"],
                 "version_id": init_version_id,
@@ -178,7 +180,7 @@ class ProcessDataFrameView(viewsets.ViewSet):
             }
             return Response(response, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
-            logger.error(f"exception {e}")
+            logger.error("exception %s", e)
             traceback.print_exception(e)
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR

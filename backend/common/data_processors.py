@@ -1,25 +1,31 @@
-import concurrent
 import json
+import logging
 import math
 import time
+from multiprocessing import Pool
+from typing import Any
 
 import pandas as pd
 
 
-def infer_col(col: pd.Series) -> str:
+logger = logging.getLogger(__name__)
+
+
+def infer_col(raw_dict: dict[Any, Any]) -> str:
+    col = pd.Series(raw_dict)
     start_time = time.time()
     infer_type = pd.api.types.infer_dtype(col, skipna=True)
-    print(f"infer type from pandas is {infer_type}")
+    logger.info("infer type from pandas col %s is %d", col.name, infer_type)
     if infer_type != "string" and infer_type != "mixed":
-        print(f"try to cast type to {infer_type}")
+        logging.info("try to cast type to %s", infer_type)
         return col
 
     try_to_date = pd.to_datetime(col, errors="coerce", exact=False)
     date_na_cnt = (pd.isna(try_to_date)).sum()
-    print(f"date_na_cnt is {date_na_cnt}")
+    logger.info("date_na_cnt is %s", date_na_cnt)
     try_to_int = pd.to_numeric(col, errors="coerce")
     int_na_cnt = (pd.isna(try_to_int)).sum()
-    print(f"int_na_cnt is {int_na_cnt}")
+    logger.info("int_na_cnt is %s", int_na_cnt)
 
     if date_na_cnt / len(col) < 0.05:
         return try_to_date
@@ -37,7 +43,45 @@ def infer_col(col: pd.Series) -> str:
     sorted_all = sorted(all_possible.items())
     na_cnt, most_not_na = sorted_all[0]
     end_time = time.time()
-    print(f"Col infer process for {col.name}: {end_time - start_time}")
+    logger.info("col infer process for %s: %d", col.name, end_time - start_time)
+    if na_cnt / len(col) < 0.2:  # the na is less than 10%
+        return most_not_na
+    else:
+        return col
+
+
+def infer_col2(col: pd.Series) -> str:
+    start_time = time.time()
+    infer_type = pd.api.types.infer_dtype(col, skipna=True)
+    logger.info(f"infer type from pandas is {infer_type}")
+    if infer_type != "string" and infer_type != "mixed":
+        logging.info(f"try to cast type to {infer_type}")
+        return col
+
+    try_to_date = pd.to_datetime(col, errors="coerce", exact=False)
+    date_na_cnt = (pd.isna(try_to_date)).sum()
+    logger.info(f"date_na_cnt is {date_na_cnt}")
+    try_to_int = pd.to_numeric(col, errors="coerce")
+    int_na_cnt = (pd.isna(try_to_int)).sum()
+    logger.info(f"int_na_cnt is {int_na_cnt}")
+
+    if date_na_cnt / len(col) < 0.05:
+        return try_to_date
+    if int_na_cnt / len(col) < 0.05:
+        return try_to_int
+
+    if len(col.unique()) / len(col) < 0.5:
+        return pd.Categorical(col)
+
+    all_possible = {
+        date_na_cnt: try_to_date,
+        int_na_cnt: try_to_int,
+    }
+
+    sorted_all = sorted(all_possible.items())
+    na_cnt, most_not_na = sorted_all[0]
+    end_time = time.time()
+    logger.info(f"Col infer process for {col.name}: {end_time - start_time}")
     if na_cnt / len(col) < 0.2:  # the na is less than 10%
         return most_not_na
     else:
@@ -45,19 +89,24 @@ def infer_col(col: pd.Series) -> str:
 
 
 def infer_df(df: pd.DataFrame):
-    # processed = pd.DataFrame()
-    # for col in df.columns:
-    #     processed[col] = infer_col(df[col])
-    # return processed
     processed = pd.DataFrame()
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {executor.submit(infer_col, df[col]): col for col in df.columns}
-        for future in concurrent.futures.as_completed(futures):
-            col = futures[future]
-            try:
-                processed[col] = future.result()
-            except Exception as exc:
-                print(f'Column {col} processing failed: {exc}')
+    for col in df.columns:
+        processed[col] = infer_col(df[col])
+    return processed
+
+
+def infer_col_wrapper(args):
+    col, df_col = args
+    return col, infer_col(df_col)
+
+
+def infer_df_parallel(df: pd.DataFrame):
+    processed = pd.DataFrame()
+    with Pool() as pool:
+        args = [(col, df[col]) for col in df.columns]
+        results = pool.map(infer_col_wrapper, args)
+        for col, result in results:
+            processed[col] = result
     return processed
 
 
@@ -71,7 +120,6 @@ safe_namespace = {
     "int": int,
     "float": float,
     "len": len,
-    # Add more functions as needed
 }
 
 
@@ -98,18 +146,19 @@ def process_operation_cast_to(
             prev_df[col] = prev_df[col].apply(bool)
     return prev_df
 
+
 def process_operation_fill_null(
     prev_df: pd.DataFrame, col: str, to_fill: str
 ) -> pd.DataFrame:
     col_dtype = prev_df[col].dtype
     # Convert the 'to_fill' value to the type of the column
-    if col_dtype == 'object':
+    if col_dtype == "object":
         to_fill_converted = str(to_fill)
-    elif col_dtype == 'int':
+    elif col_dtype == "int":
         to_fill_converted = int(to_fill)
-    elif col_dtype == 'float':
+    elif col_dtype == "float":
         to_fill_converted = float(to_fill)
-    elif col_dtype == 'datetime64[ns]':
+    elif col_dtype == "datetime64[ns]":
         to_fill_converted = pd.to_datetime(to_fill)
     else:
         raise TypeError("Unsupported column data type")

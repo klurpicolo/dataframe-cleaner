@@ -3,7 +3,7 @@ import pymongo
 
 client = pymongo.MongoClient("mongodb://localhost:27017/")
 db = client["my_mongodb_database"]
-collection = db["my_collection"]
+collection = db["dataframe_metadata"]
 
 def save_to_mongo(data):
     return collection.insert_one(data)

@@ -27,7 +27,8 @@ const DisplayDataFrame = ({ data, schema }) => {
 
   const table = useMaterialReactTable({
     columns,
-    data: memoizedData, // Use the memoized data
+    data: memoizedData,
+    initialState: { density: "compact" },
     renderTopToolbarCustomActions: ({ table }) => (
       <Box
         sx={{

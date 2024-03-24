@@ -68,7 +68,6 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
       initialState={{
         pagination: { pageSize: 3, pageIndex: 0 },
         showGlobalFilter: false,
-
         density: "compact",
       }}
       layoutMode="grid"

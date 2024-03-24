@@ -29,19 +29,24 @@ const DataframeV3 = () => {
   const [errorDialog, setErrorDialog] = useState(null);
 
   const fetchDataFrameVersion = async (dataframe_id) => {
-    console.log("callfetchDataFrameVersion");
     try {
       const response = await api.get(`/api/rest/dataframes/${dataframe_id}/`);
       setDataFrameMeta(response.data);
-      const allVersionsProcessed = response.data.versions.every(
-        (version) => version.status === "processed",
+      const noneVersionProcessing = !response.data.versions.some(
+        (version) => version.status === "processing",
       );
-      if (allVersionsProcessed) {
+      if (noneVersionProcessing) {
         setLoading(false);
         const lastVersion =
           response.data.versions[response.data.versions.length - 1];
-        const { version_id } = lastVersion;
-        await fetchDataFrame(dataframe_id, version_id);
+        if (lastVersion.status === "failed") {
+          setErrorDialog(
+            `failed to process operation ${lastVersion.operation} with script ${lastVersion.script} on column ${lastVersion.column}`,
+          );
+        } else {
+          const { version_id } = lastVersion;
+          await fetchDataFrame(dataframe_id, version_id);
+        }
       }
     } catch (error) {
       console.error("Error processing DataFrame:", error);
@@ -66,12 +71,10 @@ const DataframeV3 = () => {
     if (loading && dataFrameId !== null) {
       interval = setInterval(() => {
         fetchDataFrameVersion(dataFrameId);
-      }, 1000); // 1000 milliseconds = 1 second
+      }, 1000);
     }
-
-    // Cleanup function to clear interval when component unmounts
     return () => clearInterval(interval);
-  }, [loading, dataFrameId]); // Empty dependency array to run effect only once on mount
+  }, [loading, dataFrameId]);
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);

@@ -62,7 +62,7 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
       }}
       enableRowActions
       layoutMode="grid"
-      renderRowActions={({ row, table }) => (
+      renderRowActions={({ row }) => (
         <Box sx={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
           {downloadingVersion === row.original.version_id ? (
             <CircularProgress color="primary" size={24} />

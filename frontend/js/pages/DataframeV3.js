@@ -10,10 +10,11 @@ import {
   TextField,
   CircularProgress,
 } from "@mui/material";
+import Alert from "@mui/material/Alert";
 import React, { useState, useEffect } from "react";
 
-import DisplayDataFrame from "../component/DisplayDataFrame";
 import DisplayDataFrameMetadata from "../component/DisplayDataFrameMetadata";
+import DisplayDataFrameV3 from "../component/DisplayDataFrameV3";
 import api from "../store/api";
 
 const DataframeV3 = () => {
@@ -47,12 +48,12 @@ const DataframeV3 = () => {
   };
 
   const fetchDataFrame = async (dataframe_id, version_id) => {
-    console.log('fetchDataFrame', fetchDataFrame)
+    console.log("fetchDataFrame", fetchDataFrame);
     try {
-      // Perform API fetch with dataframe_id and version_id
-      const response = await api.get(`/api/rest/dataframes/${dataframe_id}/versions/${version_id}`);
-      console.log('fetchDataFrame response', response)
-      // Handle the response as needed
+      const response = await api.get(
+        `/api/rest/dataframes/${dataframe_id}/versions/${version_id}`,
+      );
+      console.log("fetchDataFrame response", response);
       setDataFrame(response.data);
     } catch (error) {
       console.error("Error fetching data with parameters:", error);
@@ -90,13 +91,10 @@ const DataframeV3 = () => {
       const endTime = new Date();
       const timeDiffInSeconds = (endTime - startTime) / 1000; // Convert milliseconds to seconds
       console.log("API call took", timeDiffInSeconds, "seconds to complete");
-      // setLoading(false);
-      // setDataFrame(response.data);
       console.log("response is", response.data);
       setDataFrameId(response.data.dataframe_id);
     } catch (error) {
       console.error("Error uploading file:", error);
-      // setLoading(false);
     }
   };
 
@@ -124,7 +122,6 @@ const DataframeV3 = () => {
         `/api/rest/dataframes/${dataFrame.dataframe_id}/process-async/`,
         requestBody,
       );
-      // setDataFrame(response.data);
       fetchDataFrameVersion(dataFrameId);
     } catch (error) {
       console.error("Error processing DataFrame:", error);
@@ -211,8 +208,15 @@ const DataframeV3 = () => {
       {dataFrame && (
         <>
           <p>dataframe id: {dataFrame.dataframe_id}</p>
-          <p>version id: {dataFrame.version_id}</p>
-          <DisplayDataFrame
+          {dataFrame.actual_size !== dataFrame.limit_size && (
+            <Alert severity="warning">
+              The table is not display the whole data ({dataFrame.actual_size}{" "}
+              rows) because it reach maximum display size (
+              {dataFrame.limit_size} rows). To get the all processed data,
+              please download as csv.
+            </Alert>
+          )}
+          <DisplayDataFrameV3
             data={dataFrame.data.data}
             schema={dataFrame.data.schema.fields.map((field) => ({
               accessorKey: field.name, // TODO fix issue with column contain .

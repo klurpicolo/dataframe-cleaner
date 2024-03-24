@@ -341,16 +341,19 @@ class ProcessDataFrameView(viewsets.ViewSet):
         url_path="dataframes/(?P<dataframe_id>[^/.]+)/versions/(?P<version_id>[^/.]+)",
     )
     def get_dataframe_by_id_and_version(self, request, *args, **kwargs):
+        limit_size = 100000
         dataframe_id = kwargs.get("dataframe_id")
         version_id = kwargs.get("version_id")
         dataframe = get_dataframe(dataframe_id, version_id)
         # limit code display on FE
-        json_processed_data = json.loads(map_df_to_json(dataframe[:100000]))
+        json_processed_data = json.loads(map_df_to_json(dataframe[:limit_size]))
+        actual_size = len(dataframe)
         response = {
             "dataframe_id": dataframe_id,
             "version_id": version_id,
             "data": json_processed_data,
-            "size_limit": 100000
+            "actual_size": actual_size,
+            "limit_size": limit_size if actual_size > limit_size else actual_size
         }
         return Response(response, status=status.HTTP_201_CREATED)
 

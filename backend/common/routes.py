@@ -1,7 +1,6 @@
-from .views import ProcessDataFrameView, RestViewSet
+from .views import ProcessDataFrameView
 
 
 routes = [
-    {"regex": r"rest", "viewset": RestViewSet, "basename": "Rest"},
     {"regex": r"rest", "viewset": ProcessDataFrameView, "basename": "Rest"},
 ]

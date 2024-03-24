@@ -33,23 +33,6 @@ class IndexView(generic.TemplateView):
     template_name = "common/index.html"
 
 
-class RestViewSet(viewsets.ViewSet):
-    @action(
-        detail=False,
-        methods=["get"],
-        permission_classes=[AllowAny],
-        url_path="rest-check",
-    )
-    def rest_check(self, request):
-        return Response(
-            {
-                "result": "This message comes from the backend. "
-                "If you're seeing this, the REST API is working!"
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
 def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
     processed_data = infer_df(df)
     upload_dataframe(dataframe_id, version_id, processed_data)

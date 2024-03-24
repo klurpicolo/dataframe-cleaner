@@ -4,7 +4,6 @@ import pandas as pd
 
 from backend.common.data_processors import infer_df
 
-
 class TestDataTypes(unittest.TestCase):
 
     def test_data_type_inference(self):

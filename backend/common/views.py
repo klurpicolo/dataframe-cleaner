@@ -47,9 +47,8 @@ def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str)
         upload_dataframe(dataframe_id, version_id, processed_data)
         update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
     except Exception as e:
-        logger.error('exception during create_dataframe_async, %s', e.__cause__)
+        logger.error("exception during create_dataframe_async, %s", e.__cause__)
         update_status(dataframe_id, version_id, ProcessStatus.FAIL)
-
 
 
 def process_dataframe_async(
@@ -71,7 +70,7 @@ def process_dataframe_async(
         upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
         update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
     except Exception as e:
-        logger.error('exception during process_dataframe_async, %s', e.__cause__)
+        logger.error("exception during process_dataframe_async, %s", e.__cause__)
         update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)
 
 
@@ -100,7 +99,9 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 df = pd.read_excel(file_obj)
             else:
                 return Response(
-                    {"message": "Unsupported file type, only support .csv, .xls, .xlsx"},
+                    {
+                        "message": "Unsupported file type, only support .csv, .xls, .xlsx"
+                    },
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 
@@ -157,7 +158,9 @@ class ProcessDataFrameView(viewsets.ViewSet):
                 df = pd.read_excel(file_obj)
             else:
                 return Response(
-                    {"message": "Unsupported file type, only support .csv, .xls, .xlsx"},
+                    {
+                        "message": "Unsupported file type, only support .csv, .xls, .xlsx"
+                    },
                     status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 )
 

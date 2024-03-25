@@ -30,7 +30,7 @@ const DataframeCleanerPage = () => {
 
   const fetchDataFrameVersion = async (dataframe_id) => {
     try {
-      const response = await api.get(`/api/rest/dataframes/${dataframe_id}/`);
+      const response = await api.get(`/api/dataframes/${dataframe_id}/`);
       setDataFrameMeta(response.data);
       const noneVersionProcessing = !response.data.versions.some(
         (version) => version.status === "processing",
@@ -57,7 +57,7 @@ const DataframeCleanerPage = () => {
     console.log("fetchDataFrame", fetchDataFrame);
     try {
       const response = await api.get(
-        `/api/rest/dataframes/${dataframe_id}/versions/${version_id}`,
+        `/api/dataframes/${dataframe_id}/versions/${version_id}`,
       );
       console.log("fetchDataFrame response", response);
       setDataFrame(response.data);
@@ -87,7 +87,7 @@ const DataframeCleanerPage = () => {
       setLoading(true);
       setDataFrameId(null);
       const startTime = new Date();
-      const response = await api.post("/api/rest/dataframes-async/", formData, {
+      const response = await api.post("/api/dataframes-async/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -127,7 +127,7 @@ const DataframeCleanerPage = () => {
     try {
       setLoading(true);
       const response = await api.post(
-        `/api/rest/dataframes/${dataFrame.dataframe_id}/process-async/`,
+        `/api/dataframes/${dataFrame.dataframe_id}/process-async/`,
         requestBody,
       );
       fetchDataFrameVersion(dataFrameId);

@@ -222,7 +222,11 @@ const DataframeCleanerPage = () => {
                 ? "Input the Python function in Lambda format with 'x' as input, for example x+2"
                 : "Input the value to fill null value with, it should have the same type as the column"
             }
-            label="Python Code"
+            label={
+              operationAndColumn?.operation_type === "apply_script"
+                ? "Python Code"
+                : "Value to fill"
+            }
             multiline
             rows={10}
             value={dialogInput}

@@ -1,8 +1,11 @@
+import logging
 from io import BytesIO
 
 import pandas as pd
 from minio import Minio
 
+
+logger = logging.getLogger(__name__)
 
 # This isn't not secure, just for sake of setup and prototype.
 client = Minio("localhost:9000",
@@ -25,9 +28,9 @@ def upload_dataframe(dataframe_id: str, version_id: str, df: pd.DataFrame):
     found = client.bucket_exists(dataframe_bucket_name)
     if not found:
         client.make_bucket(dataframe_bucket_name)
-        print("Created bucket", dataframe_bucket_name)
+        logger.info("Created bucket", dataframe_bucket_name)
     else:
-        print("Bucket", dataframe_bucket_name, "already exists")
+        logger.info("Bucket ", dataframe_bucket_name, " already exists")
 
     client.put_object(
         dataframe_bucket_name,
@@ -36,10 +39,7 @@ def upload_dataframe(dataframe_id: str, version_id: str, df: pd.DataFrame):
         -1,
         part_size=10*1024*1024
     )
-
-    print(
-        f"DataFrame with id {dataframe_id} successfully uploaded as object"
-    )
+    logger.info("DataFrame with id %s successfully uploaded as object", dataframe_id)
 
 def get_dataframe(dataframe_id: str, version_id: str) -> pd.DataFrame:
     raw_byte = client.get_object(dataframe_bucket_name, f"{dataframe_id}_{version_id}.{storage_file_extension}")

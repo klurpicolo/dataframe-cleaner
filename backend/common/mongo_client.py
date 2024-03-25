@@ -3,7 +3,7 @@ import pymongo
 
 # This isn't not secure, just for sake of setup and prototype.
 client = pymongo.MongoClient("mongodb://localhost:27017/")
-db = client["my_mongodb_database"]
+db = client["dataframe_cleaner"]
 collection = db["dataframe_metadata"]
 
 def save_to_mongo(data):

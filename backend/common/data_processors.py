@@ -2,9 +2,12 @@ import logging
 import math
 import time
 from multiprocessing import Pool
-from typing import Any
 
 import pandas as pd
+
+from .minio_client import upload_dataframe
+from .mongo_client import update_status
+from .processing_enum import OperationType, ProcessStatus
 
 
 logger = logging.getLogger(__name__)
@@ -129,6 +132,38 @@ def process_operation_fill_null(
 def map_df_to_json(df: pd.DataFrame) -> str:
     return df.to_json(orient="table")
 
+
+def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
+    try:
+        processed_data = infer_df_parallel(df)
+        upload_dataframe(dataframe_id, version_id, processed_data)
+        update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
+    except Exception as e:
+        logger.error("exception during create_dataframe_async, %s", e.__cause__)
+        update_status(dataframe_id, version_id, ProcessStatus.FAIL)
+
+
+def process_dataframe_async(
+    df: pd.DataFrame,
+    dataframe_id: str,
+    updated_version_id: str,
+    operation_type: str,
+    column: str,
+    raw_script: str | None = None,
+    to_fill: str | None = None,
+):
+    try:
+        if operation_type == OperationType.APPLY_SCRIPT:
+            processed_dataframe = process_operation_apply_script(df, column, raw_script)
+        elif operation_type == OperationType.FILL_NULL:
+            processed_dataframe = process_operation_fill_null(df, column, to_fill)
+        else:
+            processed_dataframe = process_operation_cast_to(df, column, operation_type)
+        upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
+        update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
+    except Exception as e:
+        logger.error("exception during process_dataframe_async, %s", e.__cause__)
+        update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)
 
 if __name__ == "__main__":
     mixed_data = {

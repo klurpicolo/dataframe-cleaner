@@ -17,9 +17,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .data_processors import (
+    create_dataframe_async,
     infer_df,
-    infer_df_parallel,
     map_df_to_json,
+    process_dataframe_async,
     process_operation_apply_script,
     process_operation_cast_to,
     process_operation_fill_null,
@@ -29,7 +30,6 @@ from .mongo_client import (
     get_dataframe_by_id,
     insert_version,
     save_to_mongo,
-    update_status,
 )
 from .processing_enum import OperationType, ProcessStatus
 
@@ -39,39 +39,6 @@ logger = logging.getLogger(__name__)
 
 class IndexView(generic.TemplateView):
     template_name = "common/index.html"
-
-
-def create_dataframe_async(df: pd.DataFrame, dataframe_id: str, version_id: str):
-    try:
-        processed_data = infer_df_parallel(df)
-        upload_dataframe(dataframe_id, version_id, processed_data)
-        update_status(dataframe_id, version_id, ProcessStatus.PROCESSED)
-    except Exception as e:
-        logger.error("exception during create_dataframe_async, %s", e.__cause__)
-        update_status(dataframe_id, version_id, ProcessStatus.FAIL)
-
-
-def process_dataframe_async(
-    df: pd.DataFrame,
-    dataframe_id: str,
-    updated_version_id: str,
-    operation_type: str,
-    column: str,
-    raw_script: str | None = None,
-    to_fill: str | None = None,
-):
-    try:
-        if operation_type == OperationType.APPLY_SCRIPT:
-            processed_dataframe = process_operation_apply_script(df, column, raw_script)
-        elif operation_type == OperationType.FILL_NULL:
-            processed_dataframe = process_operation_fill_null(df, column, to_fill)
-        else:
-            processed_dataframe = process_operation_cast_to(df, column, operation_type)
-        upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
-        update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
-    except Exception as e:
-        logger.error("exception during process_dataframe_async, %s", e.__cause__)
-        update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)
 
 
 class ProcessDataFrameView(viewsets.ViewSet):

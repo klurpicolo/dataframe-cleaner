@@ -10,8 +10,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def infer_col(raw_dict: dict[Any, Any]) -> str:
-    col = pd.Series(raw_dict)
+def infer_col(col: pd.Series) -> pd.Series:
     start_time = time.time()
     infer_type = pd.api.types.infer_dtype(col, skipna=True)
     logger.info("infer type from pandas col %s is %d", col.name, infer_type)

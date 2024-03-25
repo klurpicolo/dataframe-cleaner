@@ -53,22 +53,35 @@ prerequisites
 steps
 
 ## Further suggestion for production use
+This are the suggestion I have. I didn't do it due to the time constrain, and some of them are not require the this state of application yet.
 
-- General
+- Feature
   - Extract Some constant such as category threshold to be parameters. So, user can set this value.
+  - Add feature that allow user to rollback to a specific version, and allow them to process from a specific version.
   - Implement pagination on get dataframe API to enable users to see all data without loading csv.
   - Support User authentication and authorization.
 
 - Backend
   - Properly handle transaction across datasources.
+  - Properly seperate app for processing dataframe, to enable properly scaling backend module.
   - Set up retention on MINIO to effectively manage disk space.
-  - Seperate server that serve user request and processing data to enable proper scaling on load type ()
+  - Seperate server that serve user request and processing data to enable proper scaling on load type (IO bound, or CPU bound)
+  - For better user experience in case of processing large data file. We can consider to sent email to notify end users when data is processed.
+  - 
 
 - Frontend
   - Use TypeScript instead of Javascript to support typing. This'll improve code type consistancy in long term.
   - Use Redux to properly manage Frontend state. This version just focus on protopying, so I only use React to control state.
 
+- Test
+  - Add postman test script
+  - Add integration test on backend and frontend
+  - Do load testing on dataframe processing
 
+
+- dir
+- make docker_setup
+- make docker_
 
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](code_of_conduct.md)

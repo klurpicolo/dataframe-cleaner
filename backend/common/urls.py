@@ -7,9 +7,4 @@ from . import views
 app_name = "common"
 urlpatterns = [
     path("", views.IndexView.as_view(), name="index"),
-    path("about", views.IndexView.as_view(), name="index"),
-    path("homeklur", views.IndexView.as_view(), name="index"),
-    path("dataframev1", views.IndexView.as_view(), name="index"),
-    path("dataframev2", views.IndexView.as_view(), name="index"),
-    path("dataframe-cleaner", views.IndexView.as_view(), name="index"),
 ]

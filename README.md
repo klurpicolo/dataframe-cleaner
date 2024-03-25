@@ -1,4 +1,75 @@
-# Rhombus AI
+# Dataframe cleaner
+
+TODO
+- [Done] Apply function feature
+- [Done]Parallel process columns
+- [Done]Async processing style?
+  - 22 sec for 88MB, 558837 columns
+  - 100 sec for 225MB, 2M columns cration
+  - after parallel 80 sec for 225MB, 2M columns creation
+  - 23 sec for 225MB, 2M columns processing
+- [Done] Refactor mongo model
+- Testing
+- [Done]Error handling
+- [Done] Show version and operations
+- Setup script for MINIO
+
+
+- Write clean, maintainable, and well-documented code.
+- Include comprehensive error handling and validations in both backend and
+frontend.
+
+This project is base on [django-react-boilerplate] (https://github.com/vintasoftware/django-react-boilerplate)
+It provide many useful configuraitons and setup that help speed up Django+React stack
+
+## Main components of this project
+- [Django] for Backend
+- [React] for Frontend
+- [Wepack] for bundling static assets
+- [Material-UI] for useful UI component including table
+  - It provides nice and user-friendly React UI component out of the box.
+- [Mongo] for storing dataframe process metadata
+  - This is to help speed up development process because of its flexible schema. However, longterm-wise it's better to make sure schema consistancy.
+  - At first [Djongo] seems promise to have seemless integration with Django. However, this project is based on Django 5, and the latest version that Djongo support is only 4.2
+- [Minio] for storing the dataframe file
+  - It's a object storage that is compatible with Amazon S3.
+  - It helps store object. In this project I store uploaded file to MINIO.
+
+## How to run project using Docker
+prerequisites
+- [Make]
+- [Docker]
+
+steps
+
+
+## Development setup
+prerequisites
+- [Make]
+- [Docker]
+- [Poetry]
+- [NPM or YARN]
+
+steps
+
+## Further suggestion for production use
+
+- General
+  - Extract Some constant such as category threshold to be parameters. So, user can set this value.
+  - Implement pagination on get dataframe API to enable users to see all data without loading csv.
+  - Support User authentication and authorization.
+
+- Backend
+  - Properly handle transaction across datasources.
+  - Set up retention on MINIO to effectively manage disk space.
+  - Seperate server that serve user request and processing data to enable proper scaling on load type ()
+
+- Frontend
+  - Use TypeScript instead of Javascript to support typing. This'll improve code type consistancy in long term.
+  - Use Redux to properly manage Frontend state. This version just focus on protopying, so I only use React to control state.
+
+
+
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](code_of_conduct.md)
 [![License: MIT](https://img.shields.io/github/license/vintasoftware/django-react-boilerplate.svg)](LICENSE.txt)

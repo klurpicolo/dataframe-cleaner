@@ -13,8 +13,8 @@ import {
 import Alert from "@mui/material/Alert";
 import React, { useState, useEffect } from "react";
 
+import DisplayDataFrame from "../component/DisplayDataFrame";
 import DisplayDataFrameMetadata from "../component/DisplayDataFrameMetadata";
-import DisplayDataFrameV3 from "../component/DisplayDataFrameV3";
 import api from "../store/api";
 
 const DataframeCleanerPage = () => {
@@ -251,7 +251,7 @@ const DataframeCleanerPage = () => {
               please download as csv.
             </Alert>
           )}
-          <DisplayDataFrameV3
+          <DisplayDataFrame
             data={dataFrame.data.data}
             schema={dataFrame.data.schema.fields.map((field) => ({
               accessorKey: field.name, // TODO fix issue with column contain .

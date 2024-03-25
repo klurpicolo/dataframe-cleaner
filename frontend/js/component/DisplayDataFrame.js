@@ -5,7 +5,7 @@ import {
 } from "material-react-table";
 import { useMemo } from "react";
 
-const DisplayDataFrameV3 = ({ data, schema }) => {
+const DisplayDataFrame = ({ data, schema }) => {
   const columns = useMemo(() => schema, [schema]);
 
   const memoizedData = useMemo(() => data, [data]);
@@ -28,4 +28,4 @@ const DisplayDataFrameV3 = ({ data, schema }) => {
   return <MaterialReactTable table={table} />;
 };
 
-export default DisplayDataFrameV3;
+export default DisplayDataFrame;

@@ -271,8 +271,6 @@ const DataframeCleanerPage = () => {
                 closeMenu,
                 internalColumnMenuItems,
               }) => [
-                ...internalColumnMenuItems,
-                <Divider key="divider-1" />,
                 <MenuItem
                   key="cast_to_numeric"
                   onClick={() => {
@@ -335,6 +333,8 @@ const DataframeCleanerPage = () => {
                 >
                   Fill null value
                 </MenuItem>,
+                <Divider key="divider-1" />,
+                ...internalColumnMenuItems,
               ],
               size: 150,
             }))}

@@ -1,4 +1,3 @@
-import json
 import logging
 import math
 import time
@@ -44,44 +43,6 @@ def infer_col(raw_dict: dict[Any, Any]) -> str:
     na_cnt, most_not_na = sorted_all[0]
     end_time = time.time()
     logger.info("col infer process for %s: %d", col.name, end_time - start_time)
-    if na_cnt / len(col) < 0.2:  # the na is less than 10%
-        return most_not_na
-    else:
-        return col
-
-
-def infer_col2(col: pd.Series) -> str:
-    start_time = time.time()
-    infer_type = pd.api.types.infer_dtype(col, skipna=True)
-    logger.info(f"infer type from pandas is {infer_type}")
-    if infer_type != "string" and infer_type != "mixed":
-        logging.info(f"try to cast type to {infer_type}")
-        return col
-
-    try_to_date = pd.to_datetime(col, errors="coerce", exact=False)
-    date_na_cnt = (pd.isna(try_to_date)).sum()
-    logger.info(f"date_na_cnt is {date_na_cnt}")
-    try_to_int = pd.to_numeric(col, errors="coerce")
-    int_na_cnt = (pd.isna(try_to_int)).sum()
-    logger.info(f"int_na_cnt is {int_na_cnt}")
-
-    if date_na_cnt / len(col) < 0.05:
-        return try_to_date
-    if int_na_cnt / len(col) < 0.05:
-        return try_to_int
-
-    if len(col.unique()) / len(col) < 0.5:
-        return pd.Categorical(col)
-
-    all_possible = {
-        date_na_cnt: try_to_date,
-        int_na_cnt: try_to_int,
-    }
-
-    sorted_all = sorted(all_possible.items())
-    na_cnt, most_not_na = sorted_all[0]
-    end_time = time.time()
-    logger.info(f"Col infer process for {col.name}: {end_time - start_time}")
     if na_cnt / len(col) < 0.2:  # the na is less than 10%
         return most_not_na
     else:
@@ -168,12 +129,6 @@ def process_operation_fill_null(
 
 def map_df_to_json(df: pd.DataFrame) -> str:
     return df.to_json(orient="table")
-
-
-def map_json_to_df(json_str: str) -> pd.DataFrame:
-    dump_str = json.dumps(json_str)
-    df = pd.read_json(dump_str, orient="table")
-    return df
 
 
 if __name__ == "__main__":

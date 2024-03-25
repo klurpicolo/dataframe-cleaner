@@ -83,6 +83,7 @@ safe_namespace = {
     "int": int,
     "float": float,
     "len": len,
+    "pow": pow
 }
 
 

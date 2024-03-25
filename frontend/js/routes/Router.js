@@ -2,9 +2,9 @@ import React from "react";
 import { Route, Routes } from "react-router-dom";
 
 import About from "../pages/About";
+import DataframeCleanerPage from "../pages/DataframeCleanerPage";
 import DataframeV1 from "../pages/DataframeV1";
 import DataframeV2 from "../pages/DataframeV2";
-import DataframeV3 from "../pages/DataframeV3";
 import Home from "../pages/Home";
 
 import { ROUTES } from "./RouterConfig";
@@ -38,9 +38,9 @@ const Router = () => {
           path={ROUTES.DataframeV2}
         />
         <Route
-          element={<RouteWithRole Element={DataframeV3} />}
+          element={<RouteWithRole Element={DataframeCleanerPage} />}
           exact
-          path={ROUTES.DataframeV3}
+          path={ROUTES.DataframeCleanerPage}
         />
       </Routes>
     </div>

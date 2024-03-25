@@ -17,7 +17,7 @@ import DisplayDataFrameMetadata from "../component/DisplayDataFrameMetadata";
 import DisplayDataFrameV3 from "../component/DisplayDataFrameV3";
 import api from "../store/api";
 
-const DataframeV3 = () => {
+const DataframeCleanerPage = () => {
   const [file, setFile] = useState(null);
   const [dataFrameMeta, setDataFrameMeta] = useState([]);
   const [dataFrameId, setDataFrameId] = useState(null);
@@ -341,4 +341,4 @@ const DataframeV3 = () => {
   );
 };
 
-export default DataframeV3;
+export default DataframeCleanerPage;

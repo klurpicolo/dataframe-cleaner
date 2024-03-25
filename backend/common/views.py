@@ -24,7 +24,6 @@ from .data_processors import (
     process_operation_cast_to,
     process_operation_fill_null,
 )
-from .enum import OperationType, ProcessStatus
 from .minio_client import get_dataframe, upload_dataframe
 from .mongo_client import (
     get_dataframe_by_id,
@@ -32,6 +31,7 @@ from .mongo_client import (
     save_to_mongo,
     update_status,
 )
+from .processing_enum import OperationType, ProcessStatus
 
 
 logger = logging.getLogger(__name__)

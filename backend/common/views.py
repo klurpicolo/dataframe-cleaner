@@ -48,65 +48,6 @@ class ProcessDataFrameView(viewsets.ViewSet):
         detail=False,
         methods=["post"],
         permission_classes=[AllowAny],
-        url_path="dataframes",
-    )
-    def create_dataframe(self, request, *args, **kwargs):
-        start_time = time.time()
-        file_obj = request.FILES["file"]
-
-        if not file_obj:
-            return Response(
-                {"message": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            if file_obj.name.endswith(".csv"):
-                df = pd.read_csv(file_obj)
-            elif file_obj.name.endswith(".xls") or file_obj.name.endswith(".xlsx"):
-                df = pd.read_excel(file_obj)
-            else:
-                return Response(
-                    {
-                        "message": "Unsupported file type, only support .csv, .xls, .xlsx"
-                    },
-                    status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                )
-
-            processed_data = infer_df(df)
-            init_version_id = str(uuid.uuid4())
-            to_save = {
-                "dataframe_id": str(uuid.uuid4()),
-                "versions": [
-                    {
-                        "version_id": init_version_id,
-                        "operation": OperationType.INITIALIZE,
-                    }
-                ],
-            }
-            save_to_mongo(to_save)
-            upload_dataframe(to_save["dataframe_id"], init_version_id, processed_data)
-            json_processed_data = json.loads(map_df_to_json(processed_data))
-
-            end_time = time.time()
-            logger.info("Request process time: %s", end_time - start_time)
-
-            response = {
-                "dataframe_id": to_save["dataframe_id"],
-                "version_id": init_version_id,
-                "data": json_processed_data,
-            }
-            return Response(response, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.error("exception %s", e)
-            traceback.print_exception(e)
-            return Response(
-                {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-    @action(
-        detail=False,
-        methods=["post"],
-        permission_classes=[AllowAny],
         url_path="dataframes-async",
     )
     def create_dataframe_async(self, request, *args, **kwargs):
@@ -164,70 +105,6 @@ class ProcessDataFrameView(viewsets.ViewSet):
             return Response(
                 {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-    @action(
-        detail=False,
-        methods=["post"],
-        permission_classes=[AllowAny],
-        url_path="dataframes/(?P<dataframe_id>[^/.]+)/process",
-    )
-    def process_dataframe(self, request, *args, **kwargs):
-        dataframe_id = kwargs.get("dataframe_id")
-        request_data = request.data
-        version_id = request_data.get("version_id", None)
-        column = request_data.get("column", None)
-        operation = request_data.get("operation", None)
-        operation_type = None
-        if operation:
-            operation_type = operation.get("type", None)
-
-        if None in [dataframe_id, version_id, column, operation, operation_type]:
-            return Response(
-                {
-                    "message": "Missing parameters. Please provide all required parameters."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        raw_script = operation.get("script", None)
-        to_fill = operation.get("to_fill", None)
-        prev_dataframe = get_dataframe(dataframe_id, version_id)
-        if operation_type == OperationType.APPLY_SCRIPT:
-            processed_dataframe = process_operation_apply_script(
-                prev_dataframe, column, raw_script
-            )
-        elif operation_type == OperationType.FILL_NULL:
-            processed_dataframe = process_operation_fill_null(
-                prev_dataframe, column, to_fill
-            )
-        else:
-            processed_dataframe = process_operation_cast_to(
-                prev_dataframe, column, operation_type
-            )
-
-        updated_dataframe = json.loads(map_df_to_json(processed_dataframe))
-
-        updated_version_id = str(uuid.uuid4())
-        update = {
-            "version_id": updated_version_id,
-            "operation": operation_type,
-            **({"script": raw_script} if raw_script is not None else {}),
-            **({"to_fill": to_fill} if to_fill is not None else {}),
-            "column": column,
-        }
-
-        insert_version(dataframe_id, update)
-        upload_dataframe(dataframe_id, updated_version_id, prev_dataframe)
-
-        response_data = {
-            "dataframe_id": dataframe_id,
-            "previous_version_id": version_id,
-            "version_id": updated_version_id,
-            "column": column,
-            "operation_type": operation_type,
-            "data": updated_dataframe,
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=False,

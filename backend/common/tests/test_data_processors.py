@@ -4,6 +4,7 @@ import pandas as pd
 
 from backend.common.data_processors import infer_col, infer_df
 
+
 class TestDataTypes(unittest.TestCase):
 
     def test_defer_boolean(self):

@@ -240,7 +240,9 @@ const DataframeCleanerPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowApplyScriptForm(false)}>Cancel</Button>
-          <Button onClick={handleApplyScript}>Submit</Button>
+          <Button disabled={dialogInput === ""} onClick={handleApplyScript}>
+            Submit
+          </Button>
         </DialogActions>
       </Dialog>
 

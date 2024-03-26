@@ -4,7 +4,6 @@ import pandas as pd
 
 from backend.common.data_processors import infer_col, infer_df
 
-
 class TestDataTypes(unittest.TestCase):
 
     def test_defer_boolean(self):
@@ -14,13 +13,24 @@ class TestDataTypes(unittest.TestCase):
         result = infer_col(ser)
         self.assertEqual(result.dtype, 'bool')
 
-
     def test_defer_boolean_non_clean(self):
         data = ['true', 'false', 'true', 'false', 'false', 'false', 'false', 'true', 'false', 'N/A']
+        expected_bool = [True, False, True, False, False, False, False, True, False, False]
         ser = pd.Series(data)
 
         result = infer_col(ser)
         self.assertEqual(result.dtype, 'bool')
+        self.assertSequenceEqual(result.to_list(), expected_bool)
+
+    def test_defer_date_ddmmyyyy(self):
+        data = ['10/11/12', '10/11/13', '10/11/14', '10/12/15', '30/12/15']
+        expected_dates = ['2012-11-10', '2013-11-10', '2014-11-10', '2015-12-10', '2015-12-30']
+        ser = pd.Series(data)
+
+        result = infer_col(ser)
+        self.assertEqual(result.dtype, 'datetime64[ns]')
+        for i, date in enumerate(result):
+            self.assertEqual(date.strftime('%Y-%m-%d'), expected_dates[i])
 
     def test_defer_category(self):
         # all 60 values, with 4 unique value. So the theshold is 4/60 = 0.06

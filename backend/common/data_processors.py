@@ -12,6 +12,9 @@ from .processing_enum import OperationType, ProcessStatus
 
 logger = logging.getLogger(__name__)
 
+DATE_NA_THRESHOLD = 0.05
+INT_NA_THRESHOLD = 0.05
+CATEGORT_THESHOLD = 0.1
 
 def infer_col(col: pd.Series) -> pd.Series:
     start_time = time.time()
@@ -21,16 +24,16 @@ def infer_col(col: pd.Series) -> pd.Series:
         logging.info("try to cast type to %s", infer_type)
         return col
 
-    try_to_date = pd.to_datetime(col, errors="coerce", exact=False)
+    try_to_date = pd.to_datetime(col, errors="coerce", format='mixed', dayfirst=True)
     date_na_cnt = (pd.isna(try_to_date)).sum()
     logger.info("date_na_cnt is %s", date_na_cnt)
     try_to_int = pd.to_numeric(col, errors="coerce")
     int_na_cnt = (pd.isna(try_to_int)).sum()
     logger.info("int_na_cnt is %s", int_na_cnt)
 
-    if date_na_cnt / len(col) < 0.05:
+    if date_na_cnt / len(col) < DATE_NA_THRESHOLD:
         return try_to_date
-    if int_na_cnt / len(col) < 0.05:
+    if int_na_cnt / len(col) < INT_NA_THRESHOLD:
         return try_to_int
 
     uniques = col.unique()
@@ -39,7 +42,7 @@ def infer_col(col: pd.Series) -> pd.Series:
         if try_infer_bool is not None:
             return try_infer_bool
 
-    if len(col.unique()) / len(col) < 0.1:
+    if len(col.unique()) / len(col) < CATEGORT_THESHOLD:
         return pd.Categorical(col)
 
     all_possible = {
@@ -79,7 +82,7 @@ def infer_df_parallel(df: pd.DataFrame):
     return processed
 
 
-safe_namespace = {
+SAFE_NAMESPACES = {
     "math": math,
     "abs": abs,
     "round": round,
@@ -92,7 +95,6 @@ safe_namespace = {
     "pow": pow,
 }
 
-
 def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None:
     uniques = set(uniques_array)
     lower = set(map(str.lower, uniques))
@@ -103,17 +105,21 @@ def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None
             "false": False,
             "False": False,
         }
-        return col.map(mapping).fillna(col.replace({val: None for val in col.unique() if val.lower() not in lower})).astype(bool)
-        # return mapped
+        mapped = col.map(mapping)
+        filled_mapped = mapped.fillna(False)
+        return filled_mapped
     return None
 
 
 def process_operation_apply_script(
     prev_df: pd.DataFrame, col: str, raw_script: str
 ) -> pd.DataFrame:
+    """Return the data frame that processed by raw_script as lambda function.
+    The support method is list in SAFE_NAMESPACES.
+    """
     prev_df[col] = prev_df[col].apply(
-        lambda x: eval(raw_script, safe_namespace, {"x": x})
-    )  # TODO better secure code
+        lambda x: eval(raw_script, SAFE_NAMESPACES, {"x": x})
+    )
     return prev_df
 
 
@@ -130,9 +136,6 @@ def process_operation_cast_to(
         case "cast_to_boolean":
             prev_df[col] = prev_df[col].apply(bool)
     return prev_df
-
-
-# def cast_to_bool()
 
 
 def process_operation_fill_null(

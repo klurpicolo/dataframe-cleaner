@@ -2,7 +2,8 @@ import unittest
 
 import pandas as pd
 
-from backend.common.data_processors import infer_df
+from backend.common.data_processors import infer_col, infer_df
+
 
 class TestDataTypes(unittest.TestCase):
 
@@ -44,6 +45,16 @@ class TestDataTypes(unittest.TestCase):
         self.assertEqual(result_df['C'].dtype, 'category')
         # self.assertEqual(result_df['D'].dtype, 'boolean')
         self.assertEqual(result_df['E'].dtype, 'object')
+
+    def test_defer_boolean_with_defect_case(self):
+        data = {
+            'Boolean with defect': [True, False, True, False]
+        }
+        ser = pd.Series(data)
+
+        result = infer_col(ser)
+        print(f'klur {result}')
+        self.assertEqual(result, 'asd')
 
 if __name__ == '__main__':
     unittest.main()

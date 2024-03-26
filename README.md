@@ -16,6 +16,10 @@ It provide many useful configuraitons and setup that help speed up Django+React 
   - It's a object storage that is compatible with Amazon S3.
   - It helps store object. In this project I store uploaded file to MINIO.
 
+ The Project Architecture
+<img width="755" alt="image" src="https://github.com/klurpicolo/dataframe-cleaner/assets/31367145/f47d98b5-e632-4721-b82f-4c01306df951">
+
+
 ## How to run project using Docker
 prerequisites
 - [Make]

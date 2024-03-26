@@ -1,37 +1,18 @@
 # Dataframe cleaner
 
-TODO
-- [Done] Apply function feature
-- [Done]Parallel process columns
-- [Done]Async processing style?
-  - 22 sec for 88MB, 558837 columns
-  - 100 sec for 225MB, 2M columns cration
-  - after parallel 80 sec for 225MB, 2M columns creation
-  - 23 sec for 225MB, 2M columns processing
-- [Done] Refactor mongo model
-- Testing
-- [Done]Error handling
-- [Done] Show version and operations
-- Setup script for MINIO
-
-
-- Write clean, maintainable, and well-documented code.
-- Include comprehensive error handling and validations in both backend and
-frontend.
-
 This project is base on [django-react-boilerplate] (https://github.com/vintasoftware/django-react-boilerplate)
 It provide many useful configuraitons and setup that help speed up Django+React stack
 
 ## Main components of this project
-- [Django] for Backend
-- [React] for Frontend
-- [Wepack] for bundling static assets
-- [Material-UI] for useful UI component including table
+- [**Django**] for Backend
+- [**React**] for Frontend
+- [**Wepack**] for bundling static assets
+- [**Material-UI**] for useful UI component including table
   - It provides nice and user-friendly React UI component out of the box.
-- [Mongo] for storing dataframe process metadata
+- [**Mongo**] for storing dataframe process metadata
   - This is to help speed up development process because of its flexible schema. However, longterm-wise it's better to make sure schema consistancy.
-  - At first [Djongo] seems promise to have seemless integration with Django. However, this project is based on Django 5, and the latest version that Djongo support is only 4.2
-- [Minio] for storing the dataframe file
+  - Note, At first **Djongo** library seems promise to have seemless integration with Django. However, this project is based on Django 5, and the latest version that Djongo support is only 4.2
+- [**Minio**] for storing the dataframe file
   - It's a object storage that is compatible with Amazon S3.
   - It helps store object. In this project I store uploaded file to MINIO.
 
@@ -41,7 +22,17 @@ prerequisites
 - [Docker]
 
 steps
-
+- from the project root directory
+- run `make docker_setup`
+- run `make docker_up_dev_be_fe`
+- go to localhost:9001 to access MINIO webpage
+  - login with user `user` and password `password`
+  - manually create a new bucket name `dataframes`
+  - go to the newly created bucket and then set access policy to public
+- create a new mongo database name `dataframe_cleaner`
+- cd to path /backend
+- run this command to start backend server `poetry run ./manage.py runserver 8000`
+- TODO
 
 ## Development setup
 prerequisites

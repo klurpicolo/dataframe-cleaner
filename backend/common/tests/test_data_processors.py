@@ -22,9 +22,19 @@ class TestDataTypes(unittest.TestCase):
         self.assertEqual(result.dtype, 'bool')
         self.assertSequenceEqual(result.to_list(), expected_bool)
 
-    def test_defer_date_ddmmyyyy(self):
+    def test_defer_date_ddmmyy(self):
         data = ['10/11/12', '10/11/13', '10/11/14', '10/12/15', '30/12/15']
         expected_dates = ['2012-11-10', '2013-11-10', '2014-11-10', '2015-12-10', '2015-12-30']
+        ser = pd.Series(data)
+
+        result = infer_col(ser)
+        self.assertEqual(result.dtype, 'datetime64[ns]')
+        for i, date in enumerate(result):
+            self.assertEqual(date.strftime('%Y-%m-%d'), expected_dates[i])
+
+    def test_defer_date_yyyymmdd(self):
+        data = ['2011-02-01', '2011-03-01', '2011-04-01', '2015-01-01', '2019-01-14']
+        expected_dates = ['2011-02-01', '2011-03-01', '2011-04-01', '2015-01-01', '2019-01-14']
         ser = pd.Series(data)
 
         result = infer_col(ser)

@@ -47,6 +47,7 @@ prerequisites
 
 steps
 
+
 ## Further suggestion for production use
 This are the suggestion I have. I didn't do it due to the time constrain, and some of them are not require the this state of application yet.
 
@@ -55,6 +56,7 @@ This are the suggestion I have. I didn't do it due to the time constrain, and so
   - Add feature that allow user to rollback to a specific version, and allow them to process from a specific version.
   - Implement pagination on get dataframe API to enable users to see all data without loading csv.
   - Support User authentication and authorization.
+  - Add detail explaination to UI about the decision process, so it's clear to users on what happend on each cell.
 
 - Backend
   - Properly handle transaction across datasources.

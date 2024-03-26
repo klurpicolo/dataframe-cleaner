@@ -17,6 +17,11 @@ import DisplayDataFrame from "../component/DisplayDataFrame";
 import DisplayDataFrameMetadata from "../component/DisplayDataFrameMetadata";
 import api from "../store/api";
 
+const OperationType = {
+  ApplyScript: "apply_script",
+  FillNull: "fill_null",
+};
+
 const DataframeCleanerPage = () => {
   const [file, setFile] = useState(null);
   const [dataFrameMeta, setDataFrameMeta] = useState([]);
@@ -121,9 +126,6 @@ const DataframeCleanerPage = () => {
         to_fill,
       },
     };
-    console.log(
-      `the request body is${JSON.stringify(requestBody, undefined, 4)}`,
-    );
     try {
       setLoading(true);
       const response = await api.post(
@@ -141,8 +143,8 @@ const DataframeCleanerPage = () => {
     handleColumnAction(
       operationAndColumn.field,
       operationAndColumn.operation_type,
-      operationAndColumn.operation_type === "apply_script" ? dialogInput : null,
-      operationAndColumn.operation_type === "fill_null" ? dialogInput : null,
+      operationAndColumn.operation_type === OperationType.ApplyScript ? dialogInput : null,
+      operationAndColumn.operation_type === OperationType.FillNull ? dialogInput : null,
     );
     setDialogInput("");
     setShowApplyScriptForm(false);
@@ -180,26 +182,14 @@ const DataframeCleanerPage = () => {
       </div>
 
       {errorDialog && (
-        <>
-          <Alert
-            severity="warning"
-            onClose={() => {
-              setErrorDialog(null);
-            }}
-          >
-            {errorDialog}
-          </Alert>
-          {/* <Alert
-            action={
-              <Button color="inherit" size="small">
-                UNDO
-              </Button>
-            }
-            severity="success"
-          >
-            This Alert uses a Button component for its action.
-          </Alert> */}
-        </>
+        <Alert
+          severity="warning"
+          onClose={() => {
+            setErrorDialog(null);
+          }}
+        >
+          {errorDialog}
+        </Alert>
       )}
 
       <Dialog
@@ -212,7 +202,7 @@ const DataframeCleanerPage = () => {
         }}
       >
         <DialogTitle>
-          {operationAndColumn?.operation_type === "apply_script"
+          {operationAndColumn?.operation_type === OperationType.ApplyScript
             ? "Apply script to "
             : "Fill null value with "}
           {operationAndColumn?.field}
@@ -222,12 +212,12 @@ const DataframeCleanerPage = () => {
           <TextField
             fullWidth
             helperText={
-              operationAndColumn?.operation_type === "apply_script"
+              operationAndColumn?.operation_type === OperationType.ApplyScript
                 ? "Input the Python function in Lambda format with 'x' as input, for example x+2"
                 : "Input the value to fill null value with, it should have the same type as the column"
             }
             label={
-              operationAndColumn?.operation_type === "apply_script"
+              operationAndColumn?.operation_type === OperationType.ApplyScript
                 ? "Python Code"
                 : "Value to fill"
             }
@@ -318,7 +308,7 @@ const DataframeCleanerPage = () => {
                   onClick={() => {
                     setShowApplyScriptForm(true);
                     setOperationAndColumn({
-                      operation_type: "apply_script",
+                      operation_type: OperationType.ApplyScript,
                       field: field.name,
                     });
                     closeMenu();
@@ -331,7 +321,7 @@ const DataframeCleanerPage = () => {
                   onClick={() => {
                     setShowApplyScriptForm(true);
                     setOperationAndColumn({
-                      operation_type: "fill_null",
+                      operation_type: OperationType.FillNull,
                       field: field.name,
                     });
                     closeMenu();

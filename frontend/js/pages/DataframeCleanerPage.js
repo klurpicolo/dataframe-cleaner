@@ -162,7 +162,11 @@ const DataframeCleanerPage = () => {
           <h1>Dataframe Cleaner</h1>
           <h3>Upload CSV or Excel File</h3>
           <input type="file" onChange={handleFileChange} />
-          <button type="submit" onClick={handleFileUpload}>
+          <button
+            disabled={file === null}
+            type="submit"
+            onClick={handleFileUpload}
+          >
             Upload
           </button>
           {loading && <CircularProgress />}

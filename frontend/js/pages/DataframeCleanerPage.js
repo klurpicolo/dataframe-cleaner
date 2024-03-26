@@ -238,7 +238,6 @@ const DataframeCleanerPage = () => {
 
       {dataFrame && (
         <>
-          <p>dataframe id: {dataFrame.dataframe_id}</p>
           {dataFrame.actual_size !== dataFrame.limit_size && (
             <Alert severity="warning">
               The table is not display the whole data ({dataFrame.actual_size}{" "}

@@ -111,7 +111,7 @@ const DataframeCleanerPage = () => {
     }
   };
 
-  const handleColumnAction = async (
+  const handleProcessColumnAction = async (
     column,
     operationType,
     script = null,
@@ -138,13 +138,16 @@ const DataframeCleanerPage = () => {
     }
   };
 
-  const handleApplyScript = () => {
-    console.log(`handleApplyScript${dialogInput} to ${operationAndColumn}`);
-    handleColumnAction(
+  const handleProcessAction = () => {
+    handleProcessColumnAction(
       operationAndColumn.field,
       operationAndColumn.operation_type,
-      operationAndColumn.operation_type === OperationType.ApplyScript ? dialogInput : null,
-      operationAndColumn.operation_type === OperationType.FillNull ? dialogInput : null,
+      operationAndColumn.operation_type === OperationType.ApplyScript
+        ? dialogInput
+        : null,
+      operationAndColumn.operation_type === OperationType.FillNull
+        ? dialogInput
+        : null,
     );
     setDialogInput("");
     setShowApplyScriptForm(false);
@@ -230,7 +233,7 @@ const DataframeCleanerPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowApplyScriptForm(false)}>Cancel</Button>
-          <Button disabled={dialogInput === ""} onClick={handleApplyScript}>
+          <Button disabled={dialogInput === ""} onClick={handleProcessAction}>
             Submit
           </Button>
         </DialogActions>
@@ -269,7 +272,7 @@ const DataframeCleanerPage = () => {
                 <MenuItem
                   key="cast_to_numeric"
                   onClick={() => {
-                    handleColumnAction(field.name, "cast_to_numeric");
+                    handleProcessColumnAction(field.name, "cast_to_numeric");
                     closeMenu();
                   }}
                 >
@@ -278,7 +281,7 @@ const DataframeCleanerPage = () => {
                 <MenuItem
                   key="cast_to_string"
                   onClick={() => {
-                    handleColumnAction(field.name, "cast_to_string");
+                    handleProcessColumnAction(field.name, "cast_to_string");
                     closeMenu();
                   }}
                 >
@@ -287,7 +290,7 @@ const DataframeCleanerPage = () => {
                 <MenuItem
                   key="cast_to_datetime"
                   onClick={() => {
-                    handleColumnAction(field.name, "cast_to_datetime");
+                    handleProcessColumnAction(field.name, "cast_to_datetime");
                     closeMenu();
                   }}
                 >
@@ -296,7 +299,7 @@ const DataframeCleanerPage = () => {
                 <MenuItem
                   key="cast_to_boolean"
                   onClick={() => {
-                    handleColumnAction(field.name, "cast_to_boolean");
+                    handleProcessColumnAction(field.name, "cast_to_boolean");
                     closeMenu();
                   }}
                 >

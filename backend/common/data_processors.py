@@ -33,7 +33,13 @@ def infer_col(col: pd.Series) -> pd.Series:
     if int_na_cnt / len(col) < 0.05:
         return try_to_int
 
-    if len(col.unique()) / len(col) < 0.5:
+    uniques = col.unique()
+    if (len(uniques) <= 3):
+        try_infer_bool = infer_boolean_from_unique(col, uniques)
+        if try_infer_bool is not None:
+            return try_infer_bool
+
+    if len(col.unique()) / len(col) < 0.1:
         return pd.Categorical(col)
 
     all_possible = {
@@ -83,8 +89,23 @@ safe_namespace = {
     "int": int,
     "float": float,
     "len": len,
-    "pow": pow
+    "pow": pow,
 }
+
+
+def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None:
+    uniques = set(uniques_array)
+    lower = set(map(str.lower, uniques))
+    if "true" in lower and "false" in lower:
+        mapping = {
+            "true": True,
+            "True": True,
+            "false": False,
+            "False": False,
+        }
+        return col.map(mapping).fillna(col.replace({val: None for val in col.unique() if val.lower() not in lower})).astype(bool)
+        # return mapped
+    return None
 
 
 def process_operation_apply_script(
@@ -109,6 +130,9 @@ def process_operation_cast_to(
         case "cast_to_boolean":
             prev_df[col] = prev_df[col].apply(bool)
     return prev_df
+
+
+# def cast_to_bool()
 
 
 def process_operation_fill_null(
@@ -165,6 +189,7 @@ def process_dataframe_async(
     except Exception as e:
         logger.error("exception during process_dataframe_async, %s", e.__cause__)
         update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)
+
 
 if __name__ == "__main__":
     mixed_data = {

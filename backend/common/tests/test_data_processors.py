@@ -32,18 +32,15 @@ class TestDataTypes(unittest.TestCase):
         result = infer_col(ser)
         self.assertEqual(result.dtype, 'category')
 
-    # def test_defer_string(self):
-    #     # all 60 values, with 4 unique value. So the theshold is 4/60 = 0.06
-    #     data = ['A', 'B', 'D', 'D', 'C', 'A', 'B', 'D', 'C', 'A', 'B', 'D', 'D', 'C', 'A', 'A','D', 'D', 'A', 'A',
-    #         'A', 'B', 'D', 'D', 'C', 'A', 'B', 'D', 'C', 'A', 'B', 'D', 'D', 'C', 'A', 'A','D', 'D', 'A', 'A',
-    #         'A', 'B', 'D', 'D', 'C', 'A', 'B', 'D', 'C', 'A', 'B', 'D', 'D', 'C', 'A', 'A','D', 'D', 'A', 'A']
-    #     ser = pd.Series(data)
+    def test_defer_string(self):
+        # all 60 values, with 4 unique value. So the theshold is 4/60 = 0.06
+        data = ['Hello', 'World', 'I am', 'Software', 'Engineer']
+        ser = pd.Series(data)
 
-    #     result = infer_col(ser)
-    #     print(f'test_defer_category {result.dtypes}')
-    #     self.assertEqual(result.dtype, 'category')
+        result = infer_col(ser)
+        self.assertEqual(result.dtype, 'object')
 
-    def test_data_type_inference(self):
+    def test_data_type_inference_dataframe(self):
         # Create a sample DataFrame for testing
         data = {
             'A': ['2022-01-01', '2022-02-01', '2022-03-01', '2022-03-05', '2022-03-07', '2022-03-05', '2022-03-07'],
@@ -54,32 +51,28 @@ class TestDataTypes(unittest.TestCase):
         }
         sample_df = pd.DataFrame(data)
 
-
         result_df = infer_df(sample_df)
-        print(f'klir {result_df.dtypes}')
         self.assertEqual(result_df['A'].dtype, 'datetime64[ns]')
         self.assertEqual(result_df['B'].dtype, 'int64')
         self.assertEqual(result_df['C'].dtype, 'object')
         self.assertEqual(result_df['D'].dtype, 'bool')
         self.assertEqual(result_df['E'].dtype, 'object')
 
-    def test_handling_of_special_cases(self):
+    def test_handling_of_bad_data_cases(self):
         data = {
             'A': ['2022-01-01', '2022-02-01', 'bad data', '2022-03-05', '2022-03-07', '2022-03-05', '2022-03-07'],
             'B': ['1', '2', '3', '7', '8', 'bad data', '10'],
             'C': ['a', 'b', 'b', 'bad data', 'a', 'b', 'b'],
-            # 'D': [True, False, True, False, True, 'bad data', False], //todo make it works
+            'D': ['True', 'False', 'True', 'False', 'True', 'bad data', 'False'],
             'E': ['Hello', 'its', 'bad data', 'klur', 'world', 'happy', 'coding']
         }
         sample_df = pd.DataFrame(data)
 
-
         result_df = infer_df(sample_df)
-        print(f'klir {result_df.dtypes}')
         self.assertEqual(result_df['A'].dtype, 'datetime64[ns]')
-        self.assertEqual(result_df['B'].dtype, 'float64') # ToDO check this
-        self.assertEqual(result_df['C'].dtype, 'object')
-        # self.assertEqual(result_df['D'].dtype, 'boolean')
+        self.assertEqual(result_df['B'].dtype, 'float64')
+        self.assertEqual(result_df['C'].dtype, 'object') # Because the ratio of unique and len isn't low enough
+        self.assertEqual(result_df['D'].dtype, 'bool')
         self.assertEqual(result_df['E'].dtype, 'object')
 
 

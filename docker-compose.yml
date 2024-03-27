@@ -19,7 +19,6 @@ services:
     volumes:
       - mongodata:/data/db:delegated
 
-  # TODO add script to init the bucket with public permission to easy local setup
   minio:
     image: docker.io/bitnami/minio:2022
     ports:

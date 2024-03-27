@@ -1,0 +1,9 @@
+Some Date not valid,String,Some number not valid,Some boolean not valid
+2021-06-13,fight,837,unknown
+2021-12-06,without,321,false
+2021-06-18,12345,256,true
+9999-99-99,into,no value,false
+0000-00-00,force,278,true
+2000-11-33,our,no value,unknown
+2020-07-28,hour,17,false
+2021-12-17,hour,308,true

@@ -43,6 +43,7 @@ These suggestions aim to enhance the project for production, some of which were 
 - Enable pagination for dataframe API to facilitate viewing large datasets.
 - Implement user authentication and authorization.
 - Provide detailed explanations in the UI about decision processes for user clarity.
+- The current approach of fetching progress status involves constant pooling every 1 second. This is not ideal as it creates unnecessary connections to the backend. It would be better to use Server-Sent Events (SSE) or Websockets.
 
 ### Backend
 - Implement robust transaction handling across data sources.

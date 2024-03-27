@@ -23,14 +23,6 @@ ALLOWED_HOSTS = []
 
 DATABASES = {
     "default": config("DATABASE_URL", cast=db_url),
-    # 'default': {
-    #     'ENGINE': 'djongo',
-    #     'NAME': 'my_mongodb_database',  # Specify the name of your MongoDB database
-    #     'ENFORCE_SCHEMA': False,  # Set to False to avoid Django model validation
-    #     'CLIENT': {
-    #         'host': 'mongodb://mongo:27017/',  # Address of your MongoDB instance (in this case, the service name 'mongo' from Docker Compose)
-    #     }
-    # }
 }
 
 INSTALLED_APPS = [

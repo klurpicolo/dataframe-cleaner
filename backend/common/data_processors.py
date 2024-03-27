@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 DATE_NA_THRESHOLD = 0.05
 INT_NA_THRESHOLD = 0.05
-CATEGORT_THESHOLD = 0.1
+CATEGORY_THESHOLD = 0.1
+ACCEPTABLE_NA_THRESOLD = 0.2
+
 
 def infer_col(col: pd.Series) -> pd.Series:
     start_time = time.time()
@@ -24,7 +26,7 @@ def infer_col(col: pd.Series) -> pd.Series:
         logging.info("try to cast type to %s", infer_type)
         return col
 
-    try_to_date = pd.to_datetime(col, errors="coerce", format='mixed', dayfirst=True)
+    try_to_date = pd.to_datetime(col, errors="coerce", format="mixed", dayfirst=True)
     date_na_cnt = (pd.isna(try_to_date)).sum()
     logger.info("date_na_cnt is %s", date_na_cnt)
     try_to_int = pd.to_numeric(col, errors="coerce")
@@ -37,12 +39,12 @@ def infer_col(col: pd.Series) -> pd.Series:
         return try_to_int
 
     uniques = col.unique()
-    if (len(uniques) <= 3):
+    if len(uniques) <= 3:
         try_infer_bool = infer_boolean_from_unique(col, uniques)
         if try_infer_bool is not None:
             return try_infer_bool
 
-    if len(col.unique()) / len(col) < CATEGORT_THESHOLD:
+    if len(col.unique()) / len(col) < CATEGORY_THESHOLD:
         return pd.Categorical(col)
 
     all_possible = {
@@ -54,7 +56,7 @@ def infer_col(col: pd.Series) -> pd.Series:
     na_cnt, most_not_na = sorted_all[0]
     end_time = time.time()
     logger.info("col infer process for %s: %d", col.name, end_time - start_time)
-    if na_cnt / len(col) < 0.2:  # the na is less than 10%
+    if na_cnt / len(col) < ACCEPTABLE_NA_THRESOLD:
         return most_not_na
     else:
         return col
@@ -82,6 +84,17 @@ def infer_df_parallel(df: pd.DataFrame):
     return processed
 
 
+def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None:
+    print(f"colklur {col.name}")
+    uniques = set(uniques_array)
+    lower = set(map(str.lower, uniques))
+    if "true" in lower and "false" in lower:
+        col = col.fillna("false")
+        mapped = col.map(lambda x: True if x.lower() == "true" else False)
+        return mapped
+    return None
+
+
 SAFE_NAMESPACES = {
     "math": math,
     "abs": abs,
@@ -93,22 +106,8 @@ SAFE_NAMESPACES = {
     "float": float,
     "len": len,
     "pow": pow,
+    "split": str.split,
 }
-
-def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None:
-    uniques = set(uniques_array)
-    lower = set(map(str.lower, uniques))
-    if "true" in lower and "false" in lower:
-        mapping = {
-            "true": True,
-            "True": True,
-            "false": False,
-            "False": False,
-        }
-        mapped = col.map(mapping)
-        filled_mapped = mapped.fillna(False)
-        return filled_mapped
-    return None
 
 
 def process_operation_apply_script(
@@ -192,26 +191,3 @@ def process_dataframe_async(
     except Exception as e:
         logger.error("exception during process_dataframe_async, %s", e.__cause__)
         update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)
-
-
-if __name__ == "__main__":
-    mixed_data = {
-        "A": [
-            "2022-01-01",
-            "2022-02-01",
-            "bad data",
-            "2022-03-05",
-            "2022-03-07",
-            "2022-03-05",
-            "2022-03-07",
-        ],
-        # 'B': ['1', '2', '3', '7', '8', 'bad data', '10'],
-        # 'C': ['a', 'b', 'a', 'bad data', 'a', 'b', 'a'],
-        # 'D': [True, False, True, False, True, 'bad data', False],
-        # 'E': ['Hello', 'its', 'bad data', 'klur', 'world', 'happy', 'coding']
-    }
-    mixed_df = pd.DataFrame(mixed_data)
-    result = infer_df(mixed_df)
-    print(result.dtypes)
-    print(result["A"])
-    # print(mixed_df['D'].astype(bool))

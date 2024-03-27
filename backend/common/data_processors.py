@@ -85,7 +85,6 @@ def infer_df_parallel(df: pd.DataFrame):
 
 
 def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None:
-    print(f"colklur {col.name}")
     uniques = set(uniques_array)
     lower = set(map(str.lower, uniques))
     if "true" in lower and "false" in lower:

@@ -12,7 +12,7 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
     try {
       setDownloadingVersion(version_id); // Set downloading version
       const response = await api.get(
-        `/api/rest/dataframes/${dataframe_id}/download/${version_id}`,
+        `/api/dataframes/${dataframe_id}/download/${version_id}`,
         { responseType: "blob" },
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -83,6 +83,7 @@ const DisplayDataFrameMetadata = ({ dataframeId, versionStatus }) => {
           ) : (
             <IconButton
               color="primary"
+              disabled={row.original.status !== "processed"}
               onClick={() =>
                 handleDownload(dataframeId, row.original.version_id)
               }

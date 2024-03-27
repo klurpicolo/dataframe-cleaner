@@ -154,6 +154,12 @@ const DataframeCleanerPage = () => {
   };
 
   function mapToType(field) {
+    if (field.type === "string") {
+      return "text";
+    }
+    if (field.type === "datetime") {
+      return "date";
+    }
     if (field?.constraints?.enum !== undefined) {
       return "category";
     }
@@ -174,7 +180,7 @@ const DataframeCleanerPage = () => {
           >
             Upload
           </button>
-          {loading && <CircularProgress />}
+          {loading && <CircularProgress size={24} />}
         </div>
         <div style={{ width: "100%" }}>
           <DisplayDataFrameMetadata

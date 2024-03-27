@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from backend.common.data_processors import infer_col, infer_df
+from backend.common.data_processors import infer_col, infer_df, process_operation_apply_script
 
 
 class TestDataTypes(unittest.TestCase):
@@ -95,6 +95,18 @@ class TestDataTypes(unittest.TestCase):
         self.assertEqual(result_df['C'].dtype, 'object') # Because the ratio of unique and len isn't low enough
         self.assertEqual(result_df['D'].dtype, 'bool')
         self.assertEqual(result_df['E'].dtype, 'object')
+
+    def test_process_operation_apply_script(self):
+        col = 'email'
+        data = {
+            col: [ 'bguzman@example.org',
+                    'melendezmary@example.com',]
+        }
+        sample_df = pd.DataFrame(data)
+        result = process_operation_apply_script(sample_df, col, "x.split('@')[0]")
+
+        self.assertEqual(result[col][0], 'bguzman')
+        self.assertEqual(result[col][1], 'melendezmary')
 
 
 if __name__ == '__main__':

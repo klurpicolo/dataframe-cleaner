@@ -1,4 +1,4 @@
-Date,Name -> substring,Email -> split,Number -> Pow,Grade -> equal
+Date,Name substring,Email split,Number Pow,Grade equal
 2011-12-29,Vanessa Smith,bguzman@example.org,103,D
 2019-03-20,William Spears,brianmckenzie@example.com,436,D
 2018-01-10,Kelsey Steele,sanchezmichael@example.net,861,C

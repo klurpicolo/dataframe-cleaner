@@ -303,6 +303,15 @@ const DataframeCleanerPage = () => {
                   Cast to Datetime
                 </MenuItem>,
                 <MenuItem
+                  key="cast_to_timedelta"
+                  onClick={() => {
+                    handleProcessColumnAction(field.name, "cast_to_timedelta");
+                    closeMenu();
+                  }}
+                >
+                  Cast to Timedelta
+                </MenuItem>,
+                <MenuItem
                   key="cast_to_boolean"
                   onClick={() => {
                     handleProcessColumnAction(field.name, "cast_to_boolean");
@@ -310,6 +319,15 @@ const DataframeCleanerPage = () => {
                   }}
                 >
                   Cast to Boolean
+                </MenuItem>,
+                <MenuItem
+                  key="cast_to_category"
+                  onClick={() => {
+                    handleProcessColumnAction(field.name, "cast_to_category");
+                    closeMenu();
+                  }}
+                >
+                  Cast to Category
                 </MenuItem>,
                 <MenuItem
                   key="apply_script"

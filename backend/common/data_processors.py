@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 DATE_NA_THRESHOLD = 0.05
 INT_NA_THRESHOLD = 0.05
+TIMEDELTA_NA_THRESHOLD = 0.05
 CATEGORY_THESHOLD = 0.1
 ACCEPTABLE_NA_THRESOLD = 0.2
 
@@ -32,11 +33,16 @@ def infer_col(col: pd.Series) -> pd.Series:
     try_to_int = pd.to_numeric(col, errors="coerce")
     int_na_cnt = (pd.isna(try_to_int)).sum()
     logger.info("int_na_cnt is %s", int_na_cnt)
+    try_to_timedelta = pd.to_timedelta(col, errors='coerce')
+    timedelta_na_cnt = (pd.isna(try_to_timedelta)).sum()
+
 
     if date_na_cnt / len(col) < DATE_NA_THRESHOLD:
         return try_to_date
     if int_na_cnt / len(col) < INT_NA_THRESHOLD:
         return try_to_int
+    if timedelta_na_cnt / len(col) < TIMEDELTA_NA_THRESHOLD:
+        return try_to_timedelta
 
     uniques = col.unique()
     if len(uniques) <= 3:
@@ -131,8 +137,12 @@ def process_operation_cast_to(
             prev_df[col] = prev_df[col].apply(str)
         case "cast_to_datetime":
             prev_df[col] = pd.to_datetime(prev_df[col], errors="coerce")
+        case "cast_to_timedelta":
+            prev_df[col] = pd.to_timedelta(prev_df[col], errors="coerce")
         case "cast_to_boolean":
             prev_df[col] = prev_df[col].apply(bool)
+        case "cast_to_category":
+            prev_df[col] = pd.Categorical(prev_df[col])
     return prev_df
 
 
@@ -188,5 +198,5 @@ def process_dataframe_async(
         upload_dataframe(dataframe_id, updated_version_id, processed_dataframe)
         update_status(dataframe_id, updated_version_id, ProcessStatus.PROCESSED)
     except Exception as e:
-        logger.error("exception during process_dataframe_async, %s", e.__cause__)
+        logger.error("exception during process_dataframe_async, %s", e)
         update_status(dataframe_id, updated_version_id, ProcessStatus.FAIL)

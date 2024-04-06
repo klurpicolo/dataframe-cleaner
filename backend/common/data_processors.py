@@ -159,6 +159,8 @@ def process_operation_fill_null(
         to_fill_converted = float(to_fill)
     elif col_dtype == "datetime64[ns]":
         to_fill_converted = pd.to_datetime(to_fill)
+    elif col_dtype == "timedelta64[ns]":
+        to_fill_converted = pd.Timedelta(to_fill)
     else:
         raise TypeError("Unsupported column data type")
     prev_df[col].fillna(to_fill_converted, inplace=True)

@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 DATE_NA_THRESHOLD = 0.05
 INT_NA_THRESHOLD = 0.05
-TIMEDELTA_NA_THRESHOLD = 0.05
-CATEGORY_THESHOLD = 0.1
-ACCEPTABLE_NA_THRESOLD = 0.2
+TIMEDELTA_NA_THRESHOLD = 0.2
+CATEGORY_THRESHOLD = 0.1
+ACCEPTABLE_NA_THRESHOLD = 0.5
 
 
 def infer_col(col: pd.Series) -> pd.Series:
@@ -50,19 +50,20 @@ def infer_col(col: pd.Series) -> pd.Series:
         if try_infer_bool is not None:
             return try_infer_bool
 
-    if len(col.unique()) / len(col) < CATEGORY_THESHOLD:
+    if len(col.unique()) / len(col) < CATEGORY_THRESHOLD:
         return pd.Categorical(col)
 
     all_possible = {
         date_na_cnt: try_to_date,
         int_na_cnt: try_to_int,
+        timedelta_na_cnt: try_to_timedelta
     }
 
     sorted_all = sorted(all_possible.items())
     na_cnt, most_not_na = sorted_all[0]
     end_time = time.time()
     logger.info("col infer process for %s: %d", col.name, end_time - start_time)
-    if na_cnt / len(col) < ACCEPTABLE_NA_THRESOLD:
+    if na_cnt / len(col) < ACCEPTABLE_NA_THRESHOLD:
         return most_not_na
     else:
         return col

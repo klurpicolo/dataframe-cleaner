@@ -12,55 +12,101 @@ from .processing_enum import OperationType, ProcessStatus
 
 logger = logging.getLogger(__name__)
 
-DATE_NA_THRESHOLD = 0.05
-INT_NA_THRESHOLD = 0.05
-TIMEDELTA_NA_THRESHOLD = 0.2
-CATEGORY_THRESHOLD = 0.1
+NEED_MORE_REFINEMENT = ["string", "mixed", "integer"]
+
+DATE_NA_THRESHOLD = 0.1
+INT_NA_THRESHOLD = 0.1
+TIMEDELTA_NA_THRESHOLD = 0.1
+BOOL_NA_THRESHOLD = 0.2
+CATEGORY_THRESHOLD = 0.4
+
 ACCEPTABLE_NA_THRESHOLD = 0.5
 
 
 def infer_col(col: pd.Series) -> pd.Series:
+    """
+    *** This is not the ultimate solution as it still require a lot of refinement. ***
+    Infer type
+    This method'll try to convert the pandas series into user friendly type
+
+    - boolean
+
+    Convert the following bool compatible
+    "true", "yes", "1" to True
+    "false", "no", "0" to False
+    if all row process successfully, return as bool series
+
+    - datetime, timedelta, int, complex
+
+    convert with respective pandas type
+    also add more support on non standard
+      - delta weeks, months, years
+      - some datetime format
+
+    - category
+
+    Check cardinality before apply
+
+    - string
+
+    only if non of above satisfy conditions.
+
+    """
+
     start_time = time.time()
     infer_type = pd.api.types.infer_dtype(col, skipna=True)
     logger.info("infer type from pandas col %s is %d", col.name, infer_type)
-    if infer_type != "string" and infer_type != "mixed":
-        logging.info("try to cast type to %s", infer_type)
+    if infer_type not in NEED_MORE_REFINEMENT:
+        logging.info("pandas cast type to %s", infer_type)
         return col
 
     try_to_date = pd.to_datetime(col, errors="coerce", format="mixed", dayfirst=True)
     date_na_cnt = (pd.isna(try_to_date)).sum()
     logger.info("date_na_cnt is %s", date_na_cnt)
-    try_to_int = pd.to_numeric(col, errors="coerce")
+    try_to_int = infer_int(col)
     int_na_cnt = (pd.isna(try_to_int)).sum()
     logger.info("int_na_cnt is %s", int_na_cnt)
     try_to_timedelta = pd.to_timedelta(col, errors='coerce')
     timedelta_na_cnt = (pd.isna(try_to_timedelta)).sum()
+    try_to_boolean = infer_boolean(col)
+    boolean_na_cnt = (pd.isna(try_to_boolean)).sum()
 
-
-    if date_na_cnt / len(col) < DATE_NA_THRESHOLD:
-        return try_to_date
     if int_na_cnt / len(col) < INT_NA_THRESHOLD:
         return try_to_int
+    if boolean_na_cnt / len(col) < BOOL_NA_THRESHOLD:
+        return try_to_boolean
+    if date_na_cnt / len(col) < DATE_NA_THRESHOLD:
+        return try_to_date
     if timedelta_na_cnt / len(col) < TIMEDELTA_NA_THRESHOLD:
         return try_to_timedelta
-
-    uniques = col.unique()
-    if len(uniques) <= 3:
-        try_infer_bool = infer_boolean_from_unique(col, uniques)
-        if try_infer_bool is not None:
-            return try_infer_bool
 
     if len(col.unique()) / len(col) < CATEGORY_THRESHOLD:
         return pd.Categorical(col)
 
     all_possible = {
-        date_na_cnt: try_to_date,
-        int_na_cnt: try_to_int,
-        timedelta_na_cnt: try_to_timedelta
+        '1nt': {
+            'na_cnt' : int_na_cnt,
+            'series': try_to_int,
+        },
+        'date': {
+            'na_cnt': date_na_cnt,
+            'series': try_to_date,
+        },
+        'timedelta': {
+            'na_cnt': timedelta_na_cnt,
+            'series': try_to_timedelta,
+        },
+        'bool': {
+            'na_cnt': boolean_na_cnt,
+            'series': try_to_boolean,
+        },
     }
 
-    sorted_all = sorted(all_possible.items())
-    na_cnt, most_not_na = sorted_all[0]
+    sorted_all = sorted(all_possible.items(), key=lambda x: x[1]['na_cnt'])
+
+    _, na_cnt_series = sorted_all[0]
+    na_cnt = na_cnt_series['na_cnt']
+    most_not_na = na_cnt_series['series']
     end_time = time.time()
     logger.info("col infer process for %s: %d", col.name, end_time - start_time)
     if na_cnt / len(col) < ACCEPTABLE_NA_THRESHOLD:
@@ -91,15 +137,37 @@ def infer_df_parallel(df: pd.DataFrame):
     return processed
 
 
-def infer_boolean_from_unique(col: pd.Series, uniques_array) -> pd.Series | None:
-    uniques = set(uniques_array)
-    lower = set(map(str.lower, uniques))
-    if "true" in lower and "false" in lower:
-        col = col.fillna("false")
-        mapped = col.map(lambda x: True if x.lower() == "true" else False)
-        return mapped
-    return None
+def infer_boolean(col: pd.Series) -> pd.Series | None:
+    true_variants = ["true", "yes", "t", "1"]
+    false_variants = ["false", "no", "f", "0"]
+    def try_bool(data):
+        lower = str(data).lower()
+        if lower in true_variants:
+            return True
+        if lower in false_variants:
+            return False
+        return pd.NA
 
+    defer_bool = col.apply(try_bool).astype("boolean")
+    return defer_bool
+
+def infer_int(col: pd.Series) -> pd.Series | None:
+    to_trip_chars = ["\"", "'"]
+    to_replace = ","
+    def try_int(data):
+        for to_trim_char in to_trip_chars:
+            trimed = str(data).lstrip(to_trim_char)
+            trimed = trimed.rstrip(to_trim_char)
+
+        trimed = trimed.replace(to_replace, "")
+        try:
+            int_val = int(trimed)
+            return int_val
+        except:
+            return pd.NA
+
+    defer_int = col.apply(try_int).astype(pd.Int64Dtype())
+    return defer_int
 
 SAFE_NAMESPACES = {
     "math": math,
